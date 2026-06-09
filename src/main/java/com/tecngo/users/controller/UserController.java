@@ -1,0 +1,37 @@
+package com.tecngo.users.controller;
+
+import com.tecngo.users.dto.FcmTokenRequest;
+import com.tecngo.users.dto.UserProfileRequest;
+import com.tecngo.users.dto.UserProfileResponse;
+import com.tecngo.users.entity.User;
+import com.tecngo.users.service.UserService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/v1/users")
+@RequiredArgsConstructor
+public class UserController {
+    private final UserService service;
+
+    @PutMapping("/me/fcm-token")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateFcmToken(@Valid @RequestBody FcmTokenRequest request,
+                               @AuthenticationPrincipal User user) {
+        service.updateFcmToken(user, request.token());
+    }
+
+    @GetMapping("/me/profile")
+    public UserProfileResponse profile(@AuthenticationPrincipal User user) {
+        return service.profile(user);
+    }
+
+    @PutMapping("/me/profile")
+    public UserProfileResponse updateProfile(@Valid @RequestBody UserProfileRequest request,
+                                             @AuthenticationPrincipal User user) {
+        return service.updateProfile(user, request);
+    }
+}

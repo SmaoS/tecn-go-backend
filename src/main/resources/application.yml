@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: tecngo-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/tecngo}
+    username: ${DB_USERNAME:tecngo}
+    password: ${DB_PASSWORD:tecngo}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    baseline-on-migrate: true
+    baseline-version: 0
+  jackson:
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: ${FILE_MAX_SIZE:5MB}
+      max-request-size: ${FILE_MAX_SIZE:5MB}
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:local-development-secret-key-change-me-now}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:8081}
+  admin:
+    email: ${ADMIN_EMAIL:admin@tecngo.local}
+    password: ${ADMIN_PASSWORD:Admin123!}
+  payments:
+    platform-fee-percentage: ${PLATFORM_FEE_PERCENTAGE:10}
+  files:
+    storage-path: ${FILE_STORAGE_PATH:./uploads}
+    max-size-bytes: ${FILE_MAX_SIZE_BYTES:5242880}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

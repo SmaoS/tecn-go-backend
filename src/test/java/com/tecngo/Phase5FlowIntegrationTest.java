@@ -1,0 +1,233 @@
+package com.tecngo;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tecngo.users.repository.UserRepository;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class Phase5FlowIntegrationTest {
+    @Autowired MockMvc mvc;
+    @Autowired ObjectMapper objectMapper;
+    @Autowired UserRepository users;
+
+    @Test
+    void completeServiceCanBePaidAndRatedOnceWithFinancialHistory() throws Exception {
+        String suffix = String.valueOf(System.nanoTime());
+        String clientEmail = "client." + suffix + "@tecngo.local";
+        JsonNode client = register("Client " + suffix, clientEmail, "CLIENT");
+        JsonNode technician = register("Technician " + suffix, "tech." + suffix + "@tecngo.local", "TECHNICIAN");
+        String categoryId = json(mvc.perform(get("/v1/service-categories"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString())
+                .get(0).get("id").asText();
+
+        mvc.perform(put("/v1/users/me/fcm-token")
+                        .header("Authorization", bearer(client))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("token", "fcm-token-" + suffix))))
+                .andExpect(status().isNoContent());
+        assertThat(users.findByEmailIgnoreCase(clientEmail).orElseThrow().getFcmToken())
+                .isEqualTo("fcm-token-" + suffix);
+
+        JsonNode profile = json(mvc.perform(post("/v1/technicians/profile")
+                        .header("Authorization", bearer(technician))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of(
+                                "documentNumber", "DOC-" + suffix,
+                                "phone", "3001234567",
+                                "categoryIds", List.of(categoryId),
+                                "description", "Técnico de integración",
+                                "documentPhotoUrl", "/v1/files/document-" + suffix + ".pdf",
+                                "workExperienceDescription", "Cinco años de experiencia",
+                                "latitude", 4.711,
+                                "longitude", -74.0721
+                        ))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+        JsonNode admin = login("admin@tecngo.local", "Admin123!");
+        mvc.perform(put("/v1/admin/technicians/{id}/approve", profile.get("id").asText())
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isOk());
+
+        JsonNode request = json(mvc.perform(post("/v1/service-requests")
+                        .header("Authorization", bearer(client))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of(
+                                "categoryId", categoryId,
+                                "description", "Servicio Fase 4",
+                                "address", "Bogotá",
+                                "latitude", 4.712,
+                                "longitude", -74.073,
+                                "estimatedPrice", 120000
+                        ))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("QUOTE_PENDING"))
+                .andReturn().getResponse().getContentAsString());
+        String requestId = request.get("id").asText();
+
+        mvc.perform(put("/v1/service-requests/{id}/quote", requestId)
+                        .header("Authorization", bearer(technician))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("technicianPrice", 150000))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("QUOTED"));
+
+        JsonNode clientNotifications = json(mvc.perform(get("/v1/notifications")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("QUOTE_RECEIVED"))
+                .andReturn().getResponse().getContentAsString());
+        mvc.perform(put("/v1/notifications/{id}/read", clientNotifications.get(0).get("id").asText())
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.read").value(true));
+
+        mvc.perform(post("/v1/service-requests/{id}/chat/messages", requestId)
+                        .header("Authorization", bearer(technician))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("message", "Voy a revisar el servicio"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.message").value("Voy a revisar el servicio"));
+        mvc.perform(get("/v1/service-requests/{id}/chat", requestId)
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].readAt").doesNotExist());
+        mvc.perform(put("/v1/service-requests/{id}/chat/read", requestId)
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.updated").value(1));
+        mvc.perform(get("/v1/service-requests/{id}/chat", requestId)
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].readAt").isNotEmpty());
+
+        mvc.perform(put("/v1/service-requests/{id}/confirm-quote", requestId)
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("QUOTE_ACCEPTED"));
+
+        mvc.perform(post("/v1/service-requests/{id}/payment/cash", requestId)
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isConflict());
+
+        updateStatus(requestId, technician, "ON_THE_WAY");
+        updateStatus(requestId, technician, "ARRIVED");
+        updateStatus(requestId, technician, "IN_PROGRESS");
+        updateStatus(requestId, technician, "COMPLETED");
+
+        mvc.perform(post("/v1/service-requests/{id}/payment/cash", requestId)
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.amount").value(150000))
+                .andExpect(jsonPath("$.platformFee").value(15000))
+                .andExpect(jsonPath("$.technicianAmount").value(135000))
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"))
+                .andExpect(jsonPath("$.paymentMethod").value("CASH"));
+
+        mvc.perform(get("/v1/payments/mine")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].serviceRequestId").value(requestId));
+
+        mvc.perform(get("/v1/technicians/me/earnings")
+                        .header("Authorization", bearer(technician)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalTechnicianAmount").value(135000))
+                .andExpect(jsonPath("$.paymentCount").value(1));
+
+        mvc.perform(get("/v1/admin/payments")
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalPlatformFee").value(15000));
+
+        mvc.perform(post("/v1/service-requests/{id}/ratings", requestId)
+                        .header("Authorization", bearer(client))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("score", 5, "comment", "Excelente servicio"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.score").value(5));
+
+        mvc.perform(post("/v1/service-requests/{id}/ratings", requestId)
+                        .header("Authorization", bearer(client))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("score", 4, "comment", "Duplicada"))))
+                .andExpect(status().isConflict());
+
+        mvc.perform(post("/v1/service-requests/{id}/ratings", requestId)
+                        .header("Authorization", bearer(technician))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("score", 4, "comment", "Cliente puntual"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.ratedUserId").value(client.get("userId").asText()));
+
+        mvc.perform(get("/v1/users/me/profile")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.averageRating").value(4.0))
+                .andExpect(jsonPath("$.completedServicesCount").value(1))
+                .andExpect(jsonPath("$.paidServicesCount").value(1));
+
+        mvc.perform(get("/v1/technicians/{id}/ratings", technician.get("userId").asText()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].comment").value("Excelente servicio"));
+
+        mvc.perform(get("/v1/technicians/{id}/summary", technician.get("userId").asText()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.averageScore").value(5.0))
+                .andExpect(jsonPath("$.ratingCount").value(1));
+    }
+
+    private JsonNode register(String fullName, String email, String role) throws Exception {
+        return json(mvc.perform(post("/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("fullName", fullName, "email", email,
+                                "password", "TecnGo123!", "role", role,
+                                "documentPhotoUrl", "/v1/files/test-document.pdf",
+                                "workExperienceDescription", role.equals("TECHNICIAN")
+                                        ? "Experiencia técnica comprobada" : ""))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString());
+    }
+
+    private JsonNode login(String email, String password) throws Exception {
+        return json(mvc.perform(post("/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("email", email, "password", password))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+    }
+
+    private void updateStatus(String id, JsonNode session, String status) throws Exception {
+        mvc.perform(put("/v1/service-requests/{id}/status", id)
+                        .header("Authorization", bearer(session))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("status", status))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(status));
+    }
+
+    private String body(Object value) throws Exception {
+        return objectMapper.writeValueAsString(value);
+    }
+
+    private String bearer(JsonNode session) {
+        return "Bearer " + session.get("token").asText();
+    }
+
+    private JsonNode json(String value) throws Exception {
+        return objectMapper.readTree(value);
+    }
+}

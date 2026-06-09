@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:tecngo;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+app:
+  jwt:
+    secret: test-secret-key-that-is-long-enough-for-hmac
+    expiration-ms: 3600000
+  cors:
+    allowed-origins: http://localhost:5173
+  admin:
+    email: admin@tecngo.local
+    password: Admin123!
+  payments:
+    platform-fee-percentage: 10
+  files:
+    storage-path: ${java.io.tmpdir}/tecngo-test-uploads
+    max-size-bytes: 5242880
