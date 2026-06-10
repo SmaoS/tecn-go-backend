@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.net.MalformedURLException;
 
 @Service
-@Profile("prod")
+@Profile("!test")
 public class CloudinaryService implements FileStorage {
     private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/png", "application/pdf");
     private final Cloudinary cloudinary;

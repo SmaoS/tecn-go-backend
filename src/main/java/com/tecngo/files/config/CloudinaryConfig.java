@@ -8,12 +8,16 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 @Configuration
-@Profile("prod")
+@Profile("!test")
 public class CloudinaryConfig {
     @Bean
     Cloudinary cloudinary(@Value("${CLOUDINARY_CLOUD_NAME}") String cloudName,
                           @Value("${CLOUDINARY_API_KEY}") String apiKey,
                           @Value("${CLOUDINARY_API_SECRET}") String apiSecret) {
+        if (cloudName.isBlank() || apiKey.isBlank() || apiSecret.isBlank()) {
+            throw new IllegalStateException(
+                    "CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET are required");
+        }
         return new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", cloudName,
                 "api_key", apiKey,

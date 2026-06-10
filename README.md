@@ -146,9 +146,10 @@ comisiones del administrador se calculan desde los pagos persistidos.
 ## Archivos, perfiles y reputación
 
 Los archivos se validan como JPG, PNG o PDF y se guardan mediante la abstracción
-`FileStorage`. La implementación inicial usa `FILE_STORAGE_PATH` y un límite
-`FILE_MAX_SIZE_BYTES`; puede reemplazarse por una implementación S3 sin cambiar los
-controladores. Las fotos de perfil son públicas. Documentos y certificados solo son
+`FileStorage`. Cloudinary es el único proveedor de ejecución en desarrollo y
+producción, configurado con `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` y
+`CLOUDINARY_API_SECRET`. `FILE_MAX_SIZE_BYTES` controla el tamaño máximo. Las fotos de
+perfil son públicas. Documentos y certificados usan assets autenticados y solo son
 visibles para su dueño o un administrador.
 
 Clientes y técnicos comienzan con reputación 5.00. El promedio se actualiza al recibir

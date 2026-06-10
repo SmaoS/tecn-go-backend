@@ -10,8 +10,6 @@ spring:
 app:
   cors:
     allowed-origins: ${FRONTEND_URL:http://localhost:5173,http://localhost:8081}
-  files:
-    storage-path: ${FILE_STORAGE_PATH:./uploads}
 
 logging:
   level:
