@@ -55,7 +55,7 @@ public class FileController {
 
     private boolean canViewPrivate(User viewer, String url) {
         if (viewer == null) return false;
-        if (viewer.getRole() == Role.ADMIN) return true;
+        if (viewer.getRole() == Role.ADMIN || viewer.getRole() == Role.VERIFIER) return true;
         return url.equals(viewer.getDocumentPhotoUrl()) || url.equals(viewer.getCertificatePhotoUrl());
     }
 }

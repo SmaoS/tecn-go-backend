@@ -4,6 +4,7 @@ import com.tecngo.auth.dto.*;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
+import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,11 +23,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (request.role() == Role.ADMIN) throw new IllegalArgumentException("Admin registration is not public");
-        if (request.role() == Role.TECHNICIAN
-                && (request.workExperienceDescription() == null
-                || request.workExperienceDescription().isBlank())) {
-            throw new IllegalArgumentException("Work experience description is required for technicians");
+        if (request.role() == Role.ADMIN || request.role() == Role.VERIFIER) {
+            throw new IllegalArgumentException("This role cannot be registered publicly");
         }
         if (users.existsByEmailIgnoreCase(request.email())) throw new ConflictException("Email is already registered");
         User user = users.save(User.builder()
@@ -34,10 +32,7 @@ public class AuthService {
                 .email(request.email().trim().toLowerCase())
                 .password(passwordEncoder.encode(request.password()))
                 .role(request.role())
-                .profilePhotoUrl(clean(request.profilePhotoUrl()))
-                .documentPhotoUrl(request.documentPhotoUrl().trim())
-                .certificatePhotoUrl(clean(request.certificatePhotoUrl()))
-                .workExperienceDescription(clean(request.workExperienceDescription()))
+                .verificationStatus(VerificationStatus.CREATED)
                 .build());
         return response(user);
     }
@@ -51,10 +46,6 @@ public class AuthService {
 
     private AuthResponse response(User user) {
         return new AuthResponse(jwtService.generateToken(user), user.getId(), user.getFullName(),
-                user.getEmail(), user.getRole());
-    }
-
-    private String clean(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
+                user.getEmail(), user.getRole(), user.getVerificationStatus());
     }
 }

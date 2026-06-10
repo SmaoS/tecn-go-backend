@@ -10,7 +10,9 @@ import com.tecngo.technicians.entity.TechnicianProfile;
 import com.tecngo.technicians.entity.TechnicianStatus;
 import com.tecngo.technicians.repository.TechnicianProfileRepository;
 import com.tecngo.users.entity.User;
+import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.repository.UserRepository;
+import com.tecngo.users.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,7 @@ public class TechnicianProfileService {
     private final TechnicianProfileRepository profiles;
     private final ServiceCategoryService categoryService;
     private final UserRepository users;
+    private final UserService userService;
 
     @Transactional
     public TechnicianProfileResponse create(TechnicianProfileRequest request, User user) {
@@ -78,6 +81,10 @@ public class TechnicianProfileService {
     public TechnicianProfileResponse review(UUID id, TechnicianStatus status) {
         TechnicianProfile profile = profiles.findById(id)
                 .orElseThrow(() -> new NotFoundException("Technician profile not found"));
+        if (status == TechnicianStatus.APPROVED
+                && profile.getUser().getVerificationStatus() != VerificationStatus.VERIFIED) {
+            throw new IllegalStateException("User identity must be verified first");
+        }
         profile.setStatus(status);
         return map(profile);
     }
@@ -87,6 +94,9 @@ public class TechnicianProfileService {
         TechnicianProfile profile = findByUser(user);
         if (profile.getStatus() != TechnicianStatus.APPROVED) {
             throw new IllegalStateException("Technician profile must be approved");
+        }
+        if (user.getVerificationStatus() != VerificationStatus.VERIFIED) {
+            throw new IllegalStateException("Technician identity must be verified");
         }
         return profile;
     }
@@ -103,7 +113,8 @@ public class TechnicianProfileService {
                 profile.getCategories().stream().map(categoryService::map).toList(), profile.getDescription(),
                 profile.getLatitude(), profile.getLongitude(), profile.getStatus(), user.getProfilePhotoUrl(),
                 user.getDocumentPhotoUrl(), user.getCertificatePhotoUrl(), user.getWorkExperienceDescription(),
-                user.getAverageRating(), user.getCompletedServicesCount(), user.getPaidServicesCount());
+                user.getAverageRating(), user.getCompletedServicesCount(), user.getPaidServicesCount(),
+                user.getVerificationStatus());
     }
 
     private Set<ServiceCategory> categories(Set<UUID> ids) {
@@ -113,10 +124,12 @@ public class TechnicianProfileService {
     }
 
     private void updateUserEvidence(User user, TechnicianProfileRequest request) {
+        String previousDocument = user.getDocumentPhotoUrl();
         user.setProfilePhotoUrl(clean(request.profilePhotoUrl()));
         user.setDocumentPhotoUrl(request.documentPhotoUrl().trim());
         user.setCertificatePhotoUrl(clean(request.certificatePhotoUrl()));
         user.setWorkExperienceDescription(request.workExperienceDescription().trim());
+        userService.markPendingWhenEvidenceChanges(user, previousDocument, user.getDocumentPhotoUrl());
         users.save(user);
     }
 

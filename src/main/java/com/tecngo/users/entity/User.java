@@ -37,6 +37,16 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private VerificationStatus verificationStatus;
+
+    private Instant verifiedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "verified_by_user_id")
+    private User verifiedBy;
+
     @Column(nullable = false)
     private Instant createdAt;
 
@@ -68,6 +78,7 @@ public class User implements UserDetails {
     void onCreate() {
         if (createdAt == null) createdAt = Instant.now();
         if (averageRating == null) averageRating = new BigDecimal("5.00");
+        if (verificationStatus == null) verificationStatus = VerificationStatus.CREATED;
     }
 
     @Override

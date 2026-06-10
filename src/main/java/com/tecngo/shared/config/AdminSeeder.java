@@ -2,6 +2,7 @@ package com.tecngo.shared.config;
 
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
+import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +27,7 @@ public class AdminSeeder {
                         .email(email.toLowerCase())
                         .password(passwordEncoder.encode(password))
                         .role(Role.ADMIN)
+                        .verificationStatus(VerificationStatus.VERIFIED)
                         .build());
             }
         };

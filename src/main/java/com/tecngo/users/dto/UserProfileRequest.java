@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 public record UserProfileRequest(
         @NotBlank String fullName,
         String profilePhotoUrl,
-        @NotBlank String documentPhotoUrl,
+        String documentPhotoUrl,
         String certificatePhotoUrl,
         @Size(max = 1000) String workExperienceDescription
 ) {}
