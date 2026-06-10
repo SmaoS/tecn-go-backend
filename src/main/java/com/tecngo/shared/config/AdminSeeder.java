@@ -10,6 +10,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import java.time.Instant;
 
 @Configuration
 @RequiredArgsConstructor
@@ -19,17 +20,27 @@ public class AdminSeeder {
 
     @Bean
     CommandLineRunner seedAdmin(@Value("${app.admin.email}") String email,
-                                @Value("${app.admin.password}") String password) {
+                                @Value("${app.admin.password}") String password,
+                                @Value("${app.admin.sync-password:false}") boolean syncPassword) {
         return args -> {
-            if (!users.existsByEmailIgnoreCase(email)) {
-                users.save(User.builder()
+            users.findByEmailIgnoreCase(email).ifPresentOrElse(admin -> {
+                if (syncPassword && admin.getRole() == Role.ADMIN) {
+                    admin.setPassword(passwordEncoder.encode(password));
+                    admin.setEmailVerified(true);
+                    admin.setDocumentsVerified(true);
+                    admin.setVerificationStatus(VerificationStatus.VERIFIED);
+                    admin.setVerifiedAt(Instant.now());
+                    users.save(admin);
+                }
+            }, () -> users.save(User.builder()
                         .fullName("TecnGo Admin")
                         .email(email.toLowerCase())
                         .password(passwordEncoder.encode(password))
                         .role(Role.ADMIN)
                         .verificationStatus(VerificationStatus.VERIFIED)
-                        .build());
-            }
+                        .emailVerified(true)
+                        .documentsVerified(true)
+                        .build()));
         };
     }
 }

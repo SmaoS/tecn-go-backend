@@ -38,6 +38,7 @@ app:
   admin:
     email: ${ADMIN_EMAIL:admin@tecngo.local}
     password: ${ADMIN_PASSWORD:Admin123!}
+    sync-password: ${ADMIN_SYNC_PASSWORD:false}
   payments:
     platform-fee-percentage: ${PLATFORM_FEE_PERCENTAGE:10}
   files:

@@ -2,6 +2,7 @@ package com.tecngo.auth.service;
 
 import com.tecngo.auth.dto.*;
 import com.tecngo.shared.exception.ConflictException;
+import com.tecngo.shared.exception.UnauthorizedException;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.entity.VerificationStatus;
@@ -10,6 +11,7 @@ import com.tecngo.verification.service.EmailVerificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -48,9 +50,17 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email().toLowerCase(), request.password()));
-        User user = users.findByEmailIgnoreCase(request.email()).orElseThrow();
+        String email = request.email().trim().toLowerCase();
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, request.password()));
+        } catch (AuthenticationException exception) {
+            log.warn("Login rejected for {}", email);
+            throw new UnauthorizedException("Correo o contraseña incorrectos");
+        }
+        User user = users.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new UnauthorizedException("Correo o contraseña incorrectos"));
+        log.info("Login successful for {}", email);
         return response(user);
     }
 
