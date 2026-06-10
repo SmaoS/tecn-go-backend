@@ -41,6 +41,18 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private VerificationStatus verificationStatus;
 
+    @Column(nullable = false)
+    private boolean emailVerified;
+
+    @Column(nullable = false)
+    private boolean phoneVerified;
+
+    @Column(nullable = false)
+    private boolean documentsVerified;
+
+    @Column(length = 30)
+    private String phone;
+
     private Instant verifiedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -79,6 +91,7 @@ public class User implements UserDetails {
         if (createdAt == null) createdAt = Instant.now();
         if (averageRating == null) averageRating = new BigDecimal("5.00");
         if (verificationStatus == null) verificationStatus = VerificationStatus.CREATED;
+        if (role == Role.ADMIN || role == Role.VERIFIER) emailVerified = true;
     }
 
     @Override

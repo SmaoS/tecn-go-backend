@@ -36,6 +36,7 @@ public class UserService {
         String previousDocument = clean(user.getDocumentPhotoUrl());
         String newDocument = clean(request.documentPhotoUrl());
         user.setFullName(request.fullName().trim());
+        user.setPhone(clean(request.phone()));
         user.setProfilePhotoUrl(clean(request.profilePhotoUrl()));
         user.setDocumentPhotoUrl(newDocument);
         user.setCertificatePhotoUrl(clean(request.certificatePhotoUrl()));
@@ -45,11 +46,12 @@ public class UserService {
     }
 
     private UserProfileResponse map(User user) {
-        return new UserProfileResponse(user.getId(), user.getFullName(), user.getEmail(), user.getRole(),
+        return new UserProfileResponse(user.getId(), user.getFullName(), user.getEmail(), user.getPhone(), user.getRole(),
                 user.getProfilePhotoUrl(), user.getDocumentPhotoUrl(), user.getCertificatePhotoUrl(),
                 user.getWorkExperienceDescription(), user.getAverageRating(),
                 user.getCompletedServicesCount(), user.getPaidServicesCount(),
-                user.getVerificationStatus());
+                user.getVerificationStatus(), user.isEmailVerified(), user.isPhoneVerified(),
+                user.isDocumentsVerified());
     }
 
     public void markPendingWhenEvidenceChanges(User user, String previousDocument, String newDocument) {
@@ -59,11 +61,13 @@ public class UserService {
     private void updateVerificationStatus(User user, String previousDocument, String newDocument) {
         if (newDocument == null) {
             user.setVerificationStatus(VerificationStatus.CREATED);
+            user.setDocumentsVerified(false);
             user.setVerifiedAt(null);
             user.setVerifiedBy(null);
         } else if (!newDocument.equals(previousDocument)
                 || user.getVerificationStatus() == VerificationStatus.CREATED) {
             user.setVerificationStatus(VerificationStatus.PENDING_VERIFICATION);
+            user.setDocumentsVerified(false);
             user.setVerifiedAt(null);
             user.setVerifiedBy(null);
         }

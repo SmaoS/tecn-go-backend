@@ -13,6 +13,7 @@ import com.tecngo.users.entity.User;
 import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.repository.UserRepository;
 import com.tecngo.users.service.UserService;
+import com.tecngo.verification.service.EmailVerificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class TechnicianProfileService {
     private final ServiceCategoryService categoryService;
     private final UserRepository users;
     private final UserService userService;
+    private final EmailVerificationService emailVerification;
 
     @Transactional
     public TechnicianProfileResponse create(TechnicianProfileRequest request, User user) {
@@ -91,6 +93,7 @@ public class TechnicianProfileService {
 
     @Transactional(readOnly = true)
     public TechnicianProfile approvedProfile(User user) {
+        emailVerification.requireVerified(user);
         TechnicianProfile profile = findByUser(user);
         if (profile.getStatus() != TechnicianStatus.APPROVED) {
             throw new IllegalStateException("Technician profile must be approved");
@@ -99,6 +102,16 @@ public class TechnicianProfileService {
             throw new IllegalStateException("Technician identity must be verified");
         }
         return profile;
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> categoryNames(User user) {
+        return profiles.findByUserId(user.getId())
+                .map(profile -> profile.getCategories().stream()
+                        .map(ServiceCategory::getName)
+                        .sorted()
+                        .toList())
+                .orElseGet(List::of);
     }
 
     private TechnicianProfile findByUser(User user) {

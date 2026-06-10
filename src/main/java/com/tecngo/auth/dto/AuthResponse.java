@@ -11,5 +11,8 @@ public record AuthResponse(
         String fullName,
         String email,
         Role role,
-        VerificationStatus verificationStatus
+        VerificationStatus verificationStatus,
+        boolean emailVerified,
+        boolean phoneVerified,
+        boolean documentsVerified
 ) {}

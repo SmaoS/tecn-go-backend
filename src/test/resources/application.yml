@@ -24,3 +24,6 @@ app:
     platform-fee-percentage: 10
   files:
     max-size-bytes: 5242880
+  email:
+    verification-url: http://localhost:5173/verificar-correo
+    require-verification: false

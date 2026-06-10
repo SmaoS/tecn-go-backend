@@ -38,7 +38,22 @@ public class VerificationService {
             throw new IllegalArgumentException("Document photo is required");
         }
         user.setVerificationStatus(VerificationStatus.VERIFIED);
+        user.setDocumentsVerified(true);
         user.setVerifiedAt(Instant.now());
+        user.setVerifiedBy(reviewer);
+        return map(users.save(user));
+    }
+
+    @Transactional
+    public UserVerificationResponse reject(UUID userId, User reviewer) {
+        User user = users.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        if (user.getVerificationStatus() != VerificationStatus.PENDING_VERIFICATION) {
+            throw new ConflictException("User is not pending verification");
+        }
+        user.setVerificationStatus(VerificationStatus.CREATED);
+        user.setDocumentsVerified(false);
+        user.setVerifiedAt(null);
         user.setVerifiedBy(reviewer);
         return map(users.save(user));
     }

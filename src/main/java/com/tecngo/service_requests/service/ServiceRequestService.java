@@ -14,6 +14,7 @@ import com.tecngo.shared.exception.NotFoundException;
 import com.tecngo.technicians.service.TechnicianProfileService;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
+import com.tecngo.verification.service.EmailVerificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationEventPublisher;
@@ -32,10 +33,12 @@ public class ServiceRequestService {
     private final TechnicianProfileService technicianProfiles;
     private final HaversineDistance distance;
     private final ApplicationEventPublisher events;
+    private final EmailVerificationService emailVerification;
 
     @Transactional
     public ServiceRequestResponse create(CreateServiceRequest request, User client) {
         requireRole(client, Role.CLIENT);
+        emailVerification.requireVerified(client);
         if (client.getDocumentPhotoUrl() == null || client.getDocumentPhotoUrl().isBlank()) {
             throw new ConflictException("Complete your profile with a document before requesting a service");
         }
@@ -65,6 +68,7 @@ public class ServiceRequestService {
     @Transactional(readOnly = true)
     public List<ServiceRequestResponse> available(User technician, double radiusKm) {
         requireRole(technician, Role.TECHNICIAN);
+        emailVerification.requireVerified(technician);
         if (radiusKm <= 0 || radiusKm > 100) {
             throw new IllegalArgumentException("radiusKm must be greater than 0 and at most 100");
         }
@@ -84,6 +88,7 @@ public class ServiceRequestService {
     @Transactional
     public ServiceRequestResponse quote(UUID id, BigDecimal technicianPrice, User technician) {
         requireRole(technician, Role.TECHNICIAN);
+        emailVerification.requireVerified(technician);
         var profile = technicianProfiles.approvedProfile(technician);
         ServiceRequest request = requests.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Service request not found"));
@@ -173,6 +178,7 @@ public class ServiceRequestService {
                 technician == null ? null : technician.getAverageRating(),
                 technician == null ? 0 : technician.getCompletedServicesCount(),
                 technician == null ? null : technician.getWorkExperienceDescription(),
+                technician == null ? List.of() : technicianProfiles.categoryNames(technician),
                 item.getCategory().getId(), item.getCategory().getName(), item.getDescription(),
                 approximateLocation ? approximate(item.getAddress()) : item.getAddress(),
                 approximateLocation ? null : item.getLatitude(), approximateLocation ? null : item.getLongitude(),

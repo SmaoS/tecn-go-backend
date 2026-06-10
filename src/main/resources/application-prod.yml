@@ -17,7 +17,9 @@ spring:
 
 app:
   cors:
-    allowed-origins: ${FRONTEND_URL},https://*.vercel.app
+    allowed-origins: ${FRONTEND_URL},${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:8081},https://*.vercel.app
+  email:
+    require-verification: ${REQUIRE_EMAIL_VERIFICATION:true}
 
 logging:
   pattern:

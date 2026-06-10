@@ -62,12 +62,26 @@ Admin123!
 
 Las credenciales se configuran mediante `ADMIN_EMAIL` y `ADMIN_PASSWORD`.
 
+## Verificación de correo
+
+Resend es el proveedor activo. Los tokens son aleatorios, expiran y en base de datos se
+guarda únicamente su hash. En producción `REQUIRE_EMAIL_VERIFICATION=true` bloquea la
+creación de solicitudes y las operaciones sensibles del técnico hasta confirmar el
+correo. Sin `RESEND_API_KEY`, desarrollo escribe el enlace en los logs.
+
 ## Endpoints principales
 
 | Método | Ruta | Acceso |
 | --- | --- | --- |
 | POST | `/api/v1/auth/register` | Público |
 | POST | `/api/v1/auth/login` | Público |
+| POST | `/api/v1/auth/send-email-verification` | JWT |
+| POST | `/api/v1/auth/resend-email-verification` | JWT |
+| POST | `/api/v1/auth/verify-email` | Público |
+| GET, PUT | `/api/v1/clients/me/profile` | CLIENT propietario |
+| GET | `/api/v1/admin/users/pending-documents` | ADMIN o VERIFIER |
+| PUT | `/api/v1/admin/users/{id}/verify-documents` | ADMIN o VERIFIER |
+| PUT | `/api/v1/admin/users/{id}/reject-documents` | ADMIN o VERIFIER |
 | GET | `/api/v1/verifications/pending` | ADMIN o VERIFIER |
 | PUT | `/api/v1/verifications/{userId}/verify` | ADMIN o VERIFIER |
 | GET, POST | `/api/v1/admin/verifiers` | ADMIN |
