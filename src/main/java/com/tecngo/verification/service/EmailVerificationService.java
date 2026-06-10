@@ -7,6 +7,7 @@ import com.tecngo.users.repository.UserRepository;
 import com.tecngo.verification.entity.VerificationToken;
 import com.tecngo.verification.repository.VerificationTokenRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ import java.util.HexFormat;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EmailVerificationService {
     private final VerificationTokenRepository tokens;
     private final UserRepository users;
@@ -38,7 +40,11 @@ public class EmailVerificationService {
 
     @Transactional
     public void send(User user) {
-        if (user.isEmailVerified()) return;
+        if (user.isEmailVerified()) {
+            log.info("Verification email skipped for {} because the address is already verified", user.getEmail());
+            return;
+        }
+        log.info("Generating email verification token for {}", user.getEmail());
         tokens.deleteByUserId(user.getId());
         String rawToken = token();
         tokens.save(VerificationToken.builder()
