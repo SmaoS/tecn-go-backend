@@ -42,6 +42,16 @@ class Phase5FlowIntegrationTest {
         assertThat(users.findByEmailIgnoreCase(clientEmail).orElseThrow().getFcmToken())
                 .isEqualTo("fcm-token-" + suffix);
 
+        mvc.perform(put("/v1/users/me/profile")
+                        .header("Authorization", bearer(client))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of(
+                                "fullName", "Client " + suffix,
+                                "documentPhotoUrl", "/v1/files/client-document-" + suffix + ".pdf"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verificationStatus").value("PENDING_VERIFICATION"));
+
         JsonNode profile = json(mvc.perform(post("/v1/technicians/profile")
                         .header("Authorization", bearer(technician))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -58,6 +68,10 @@ class Phase5FlowIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString());
         JsonNode admin = login("admin@tecngo.local", "Admin123!");
+        mvc.perform(put("/v1/verifications/{id}/verify", technician.get("userId").asText())
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.verificationStatus").value("VERIFIED"));
         mvc.perform(put("/v1/admin/technicians/{id}/approve", profile.get("id").asText())
                         .header("Authorization", bearer(admin)))
                 .andExpect(status().isOk());
@@ -194,11 +208,9 @@ class Phase5FlowIntegrationTest {
         return json(mvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(Map.of("fullName", fullName, "email", email,
-                                "password", "TecnGo123!", "role", role,
-                                "documentPhotoUrl", "/v1/files/test-document.pdf",
-                                "workExperienceDescription", role.equals("TECHNICIAN")
-                                        ? "Experiencia técnica comprobada" : ""))))
+                                "password", "TecnGo123!", "role", role))))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.verificationStatus").value("CREATED"))
                 .andReturn().getResponse().getContentAsString());
     }
 
