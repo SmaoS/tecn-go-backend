@@ -38,6 +38,15 @@ La API queda en `http://localhost:8080/api` y Swagger en
 
 También puede iniciarse desde `tecngo-infra` con Docker Compose.
 
+Para desarrollo local, activar:
+
+```bash
+SPRING_PROFILES_ACTIVE=dev
+```
+
+Producción usa `application-prod.yml`, Neon con TLS, Cloudinary y `ddl-auto=validate`.
+La guía completa está en `tecngo-infra/DEPLOY_RAILWAY.md`.
+
 ## Roles y usuario administrador
 
 Los roles disponibles son `CLIENT`, `TECHNICIAN` y `ADMIN`. El JWT incluye el claim

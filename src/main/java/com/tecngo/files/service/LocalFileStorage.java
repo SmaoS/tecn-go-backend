@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
+@Profile("!prod")
 public class LocalFileStorage implements FileStorage {
     private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/png", "application/pdf");
     private final Path root;
@@ -51,7 +53,8 @@ public class LocalFileStorage implements FileStorage {
         if (!target.getParent().equals(root)) throw new IllegalArgumentException("Invalid file name");
         try {
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-            return new StoredFile(fileName, contentType, file.getSize());
+            return new StoredFile(fileName, contentType, file.getSize(),
+                    "/v1/files/" + fileName, "/v1/files/" + fileName, fileName, publicAccess);
         } catch (IOException exception) {
             throw new IllegalStateException("Could not store file", exception);
         }

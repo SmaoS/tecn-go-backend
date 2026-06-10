@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/v1/files")
+@RequestMapping({"/files", "/v1/files"})
 @RequiredArgsConstructor
 public class FileController {
     private final FileStorage storage;
@@ -26,7 +26,7 @@ public class FileController {
                                      @RequestParam(defaultValue = "DOCUMENT") FileKind kind) {
         var stored = storage.store(file, kind == FileKind.PROFILE);
         return new FileUploadResponse(stored.fileName(), stored.contentType(), stored.size(),
-                "/v1/files/" + stored.fileName());
+                stored.accessUrl(), stored.secureUrl(), stored.publicId());
     }
 
     @GetMapping("/{fileName:.+}")
@@ -39,8 +39,15 @@ public class FileController {
             throw new ForbiddenException("This evidence file is private");
         }
         Resource resource = storage.load(fileName);
-        MediaType type = fileName.endsWith(".pdf") ? MediaType.APPLICATION_PDF
-                : fileName.endsWith(".png") ? MediaType.IMAGE_PNG : MediaType.IMAGE_JPEG;
+        String resolvedUrl;
+        try {
+            resolvedUrl = resource.getURL().toString();
+        } catch (java.io.IOException exception) {
+            resolvedUrl = fileName;
+        }
+        MediaType type = resolvedUrl.contains("/raw/") || resolvedUrl.endsWith(".pdf")
+                ? MediaType.APPLICATION_PDF
+                : resolvedUrl.endsWith(".png") ? MediaType.IMAGE_PNG : MediaType.IMAGE_JPEG;
         return ResponseEntity.ok().contentType(type)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"")
                 .body(resource);

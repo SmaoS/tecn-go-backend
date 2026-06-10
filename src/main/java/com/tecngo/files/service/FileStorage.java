@@ -7,5 +7,8 @@ public interface FileStorage {
     StoredFile store(MultipartFile file, boolean publicAccess);
     Resource load(String fileName);
 
-    record StoredFile(String fileName, String contentType, long size) {}
+    record StoredFile(
+            String fileName, String contentType, long size, String accessUrl,
+            String secureUrl, String publicId, boolean publicAccess
+    ) {}
 }

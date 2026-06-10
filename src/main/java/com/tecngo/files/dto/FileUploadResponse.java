@@ -1,3 +1,6 @@
 package com.tecngo.files.dto;
 
-public record FileUploadResponse(String fileName, String contentType, long size, String url) {}
+public record FileUploadResponse(
+        String fileName, String contentType, long size, String url,
+        String secureUrl, String publicId
+) {}

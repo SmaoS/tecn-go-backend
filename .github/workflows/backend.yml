@@ -15,7 +15,9 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
-      - name: Test and package
-        run: mvn --batch-mode verify
+      - name: Run tests
+        run: mvn --batch-mode test
+      - name: Package application
+        run: mvn --batch-mode -DskipTests package
       - name: Build image
         run: docker build -t tecngo-backend:ci .

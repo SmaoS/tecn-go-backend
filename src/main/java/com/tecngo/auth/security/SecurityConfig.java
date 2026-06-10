@@ -37,7 +37,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/v1/auth/**", "/v1/files/**", "/v1/services/**", "/v1/service-categories/**", "/swagger-ui/**",
-                                "/swagger-ui.html", "/v3/api-docs/**", "/actuator/health", "/error").permitAll()
+                                "/swagger-ui.html", "/v3/api-docs/**", "/actuator/health", "/actuator/info",
+                                "/version", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/technicians/*/ratings",
                                 "/v1/technicians/*/summary").permitAll()
                         .anyRequest().authenticated())
@@ -69,7 +70,8 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource(
             @Value("${app.cors.allowed-origins}") String allowedOrigins) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+        List<String> origins = List.of(allowedOrigins.split(",")).stream().map(String::trim).toList();
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

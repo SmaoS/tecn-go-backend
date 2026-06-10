@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/tecngo}
+    username: ${DB_USERNAME:tecngo}
+    password: ${DB_PASSWORD:tecngo}
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+app:
+  cors:
+    allowed-origins: ${FRONTEND_URL:http://localhost:5173,http://localhost:8081}
+  files:
+    storage-path: ${FILE_STORAGE_PATH:./uploads}
+
+logging:
+  level:
+    com.tecngo: DEBUG
