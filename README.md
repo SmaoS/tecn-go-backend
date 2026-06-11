@@ -218,6 +218,10 @@ privada puede configurarse mediante todos sus campos individuales. Para Railway 
 recomienda enviar el archivo completo codificado en Base64 mediante
 `FIREBASE_CREDENTIALS_BASE64`, evitando problemas con comillas y saltos de línea.
 
+La migración `V11` actualiza el constraint PostgreSQL de `notifications.type` para
+aceptar todos los tipos anteriores. Debe desplegarse antes de generar nuevas
+notificaciones con `NEW_QUOTE`, `NEW_REQUEST` o los estados de seguimiento.
+
 ## Pruebas y build
 
 ```bash
