@@ -6,5 +6,6 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record NotificationResponse(
-        UUID id, String title, String message, NotificationType type, boolean read, Instant createdAt
+        UUID id, String title, String message, NotificationType type, boolean read, Instant createdAt,
+        String route, UUID requestId
 ) {}

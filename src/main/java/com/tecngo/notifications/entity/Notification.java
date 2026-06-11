@@ -39,6 +39,11 @@ public class Notification {
     @Column(nullable = false)
     private Instant createdAt;
 
+    @Column(length = 80)
+    private String route;
+
+    private UUID requestId;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = Instant.now();

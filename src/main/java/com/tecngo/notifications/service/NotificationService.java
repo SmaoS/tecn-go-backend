@@ -56,12 +56,23 @@ public class NotificationService {
                 .title(event.title())
                 .message(event.message())
                 .type(event.type())
+                .route(event.data().get("route"))
+                .requestId(parseUuid(event.data().get("requestId")))
                 .build());
         pushNotifications.sendPush(user.getId(), event.title(), event.message(), event.data());
     }
 
     private NotificationResponse map(Notification item) {
         return new NotificationResponse(item.getId(), item.getTitle(), item.getMessage(),
-                item.getType(), item.isRead(), item.getCreatedAt());
+                item.getType(), item.isRead(), item.getCreatedAt(), item.getRoute(), item.getRequestId());
+    }
+
+    private UUID parseUuid(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 }

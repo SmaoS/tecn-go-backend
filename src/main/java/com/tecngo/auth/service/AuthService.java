@@ -16,6 +16,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
+import com.tecngo.notifications.event.UserNotificationEvent;
+import com.tecngo.notifications.entity.NotificationType;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +30,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final EmailVerificationService emailVerificationService;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -46,6 +51,10 @@ public class AuthService {
             log.error("Account {} was created, but the verification email could not be sent",
                     user.getEmail(), exception);
         }
+        events.publishEvent(new UserNotificationEvent(user.getId(), "Documentos legales pendientes",
+                "Lee y acepta los términos, políticas y recomendaciones para usar todas las funciones de TecnGo.",
+                NotificationType.LEGAL_ACCEPTANCE_REQUIRED,
+                Map.of("type", "LEGAL", "route", "Legal")));
         return response(user);
     }
 

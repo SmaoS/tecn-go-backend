@@ -113,7 +113,7 @@ class Phase5FlowIntegrationTest {
         mvc.perform(get("/v1/notifications/unread-count")
                         .header("Authorization", bearer(client)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.count").value(1));
+                .andExpect(jsonPath("$.count").value(2));
         mvc.perform(put("/v1/notifications/{id}/read", clientNotifications.get(0).get("id").asText())
                         .header("Authorization", bearer(client)))
                 .andExpect(status().isOk())
@@ -121,7 +121,7 @@ class Phase5FlowIntegrationTest {
         mvc.perform(get("/v1/notifications/unread-count")
                         .header("Authorization", bearer(client)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.count").value(0));
+                .andExpect(jsonPath("$.count").value(1));
 
         mvc.perform(put("/v1/service-requests/{id}/confirm-quote", requestId)
                         .header("Authorization", bearer(client))

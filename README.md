@@ -250,6 +250,10 @@ perfil no hace reconocimiento biométrico ni comparación documental: queda
 `profilePhotoFaceValidated=false` hasta revisión manual mediante
 `PUT /v1/verifications/{userId}/profile-photo/verify`.
 
+La migración `V14` publica los documentos `2.0-draft`, crea la notificación legal
+inicial y persiste `route`/`requestId` para navegación contextual desde web, mobile y
+push FCM.
+
 ## Pruebas y build
 
 ```bash
