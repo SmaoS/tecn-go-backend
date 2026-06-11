@@ -214,8 +214,9 @@ persistida y, si existe token, un push FCM.
 `UserPushNotificationService` y `PushNotificationGateway` desacoplan la lógica de
 negocio del transporte. Con `FIREBASE_ENABLED=false` se usa logging; con
 `FIREBASE_ENABLED=true`, Firebase Admin SDK envía al token nativo registrado. La clave
-privada se configura en `FIREBASE_PRIVATE_KEY` usando `\n` para representar saltos de
-línea.
+privada puede configurarse mediante todos sus campos individuales. Para Railway se
+recomienda enviar el archivo completo codificado en Base64 mediante
+`FIREBASE_CREDENTIALS_BASE64`, evitando problemas con comillas y saltos de línea.
 
 ## Pruebas y build
 
