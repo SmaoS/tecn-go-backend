@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Set;
 
 @Service
 @Profile("test")
@@ -29,6 +30,22 @@ public class TestFileStorage implements FileStorage {
         String fileName = (publicAccess ? "public-" : "private-") + UUID.randomUUID();
         String url = "/v1/files/" + fileName;
         return new StoredFile(fileName, contentType, file.getSize(), url, url, fileName, publicAccess);
+    }
+
+    @Override
+    public StoredFile store(MultipartFile file, boolean publicAccess, String folder,
+                            Set<String> allowedTypes) {
+        String contentType = file.getContentType() == null ? "" : file.getContentType();
+        if (!allowedTypes.contains(contentType)) throw new IllegalArgumentException("File type is not allowed");
+        String fileName = (publicAccess ? "public-" : "private-") + UUID.randomUUID();
+        String url = "/v1/files/" + fileName;
+        return new StoredFile(fileName, contentType, file.getSize(),
+                url, url, folder + "/" + UUID.randomUUID(), publicAccess);
+    }
+
+    @Override
+    public void delete(String publicId) {
+        // No-op test storage.
     }
 
     @Override

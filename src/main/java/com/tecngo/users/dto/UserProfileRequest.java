@@ -9,5 +9,10 @@ public record UserProfileRequest(
         String profilePhotoUrl,
         String documentPhotoUrl,
         String certificatePhotoUrl,
-        @Size(max = 1000) String workExperienceDescription
+        @Size(max = 1000) String workExperienceDescription,
+        @Size(max = 255) String homeAddress,
+        Double homeLatitude,
+        Double homeLongitude,
+        @Size(max = 120) String homeCity,
+        @Size(max = 120) String homeNeighborhood
 ) {}

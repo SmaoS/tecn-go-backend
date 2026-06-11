@@ -111,15 +111,18 @@ class MultipleQuotesIntegrationTest {
         JsonNode profile = json(mvc.perform(post("/v1/technicians/profile")
                         .header("Authorization", bearer(session))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body(Map.of(
-                                "documentNumber", document,
-                                "phone", "3001234567",
-                                "categoryIds", List.of(categoryId),
-                                "description", "Técnico disponible",
-                                "documentPhotoUrl", "/v1/files/" + document + ".pdf",
-                                "workExperienceDescription", "Experiencia comprobada",
-                                "latitude", latitude,
-                                "longitude", longitude
+                        .content(body(Map.ofEntries(
+                                Map.entry("documentNumber", document),
+                                Map.entry("phone", "3001234567"),
+                                Map.entry("categoryIds", List.of(categoryId)),
+                                Map.entry("description", "Técnico disponible"),
+                                Map.entry("documentPhotoUrl", "/v1/files/" + document + ".pdf"),
+                                Map.entry("workExperienceDescription", "Experiencia comprobada"),
+                                Map.entry("latitude", latitude),
+                                Map.entry("longitude", longitude),
+                                Map.entry("homeAddress", "Calle 10 # 20-30"),
+                                Map.entry("homeLatitude", latitude),
+                                Map.entry("homeLongitude", longitude)
                         ))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString());

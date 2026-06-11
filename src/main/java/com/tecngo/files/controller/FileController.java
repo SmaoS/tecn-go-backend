@@ -12,6 +12,7 @@ import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.Set;
 
 @RestController
 @RequestMapping({"/files", "/v1/files"})
@@ -24,7 +25,14 @@ public class FileController {
     @ResponseStatus(HttpStatus.CREATED)
     public FileUploadResponse upload(@RequestPart("file") MultipartFile file,
                                      @RequestParam(defaultValue = "DOCUMENT") FileKind kind) {
-        var stored = storage.store(file, kind == FileKind.PROFILE);
+        boolean publicAccess = kind == FileKind.PROFILE;
+        String folder = switch (kind) {
+            case PROFILE -> "tecngo/profiles";
+            case DOCUMENT -> "tecngo/documents";
+            case CERTIFICATE -> "tecngo/certificates";
+        };
+        var stored = storage.store(file, publicAccess, folder,
+                Set.of("image/jpeg", "image/png", "application/pdf"));
         return new FileUploadResponse(stored.fileName(), stored.contentType(), stored.size(),
                 stored.accessUrl(), stored.secureUrl(), stored.publicId());
     }

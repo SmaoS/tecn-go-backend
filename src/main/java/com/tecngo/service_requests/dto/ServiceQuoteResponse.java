@@ -21,5 +21,7 @@ public record ServiceQuoteResponse(
         String description,
         QuoteStatus status,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        Instant expiresAt,
+        Instant respondedAt
 ) {}

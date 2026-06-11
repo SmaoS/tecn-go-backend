@@ -127,7 +127,8 @@ public class TechnicianProfileService {
                 profile.getLatitude(), profile.getLongitude(), profile.getStatus(), user.getProfilePhotoUrl(),
                 user.getDocumentPhotoUrl(), user.getCertificatePhotoUrl(), user.getWorkExperienceDescription(),
                 user.getAverageRating(), user.getCompletedServicesCount(), user.getPaidServicesCount(),
-                user.getVerificationStatus());
+                user.getVerificationStatus(), user.getHomeAddress(), user.getHomeLatitude(),
+                user.getHomeLongitude(), user.getHomeCity(), user.getHomeNeighborhood());
     }
 
     private Set<ServiceCategory> categories(Set<UUID> ids) {
@@ -142,6 +143,11 @@ public class TechnicianProfileService {
         user.setDocumentPhotoUrl(request.documentPhotoUrl().trim());
         user.setCertificatePhotoUrl(clean(request.certificatePhotoUrl()));
         user.setWorkExperienceDescription(request.workExperienceDescription().trim());
+        user.setHomeAddress(request.homeAddress().trim());
+        user.setHomeLatitude(request.homeLatitude());
+        user.setHomeLongitude(request.homeLongitude());
+        user.setHomeCity(clean(request.homeCity()));
+        user.setHomeNeighborhood(clean(request.homeNeighborhood()));
         userService.markPendingWhenEvidenceChanges(user, previousDocument, user.getDocumentPhotoUrl());
         users.save(user);
     }

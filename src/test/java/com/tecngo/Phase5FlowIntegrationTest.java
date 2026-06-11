@@ -57,15 +57,18 @@ class Phase5FlowIntegrationTest {
         JsonNode profile = json(mvc.perform(post("/v1/technicians/profile")
                         .header("Authorization", bearer(technician))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body(Map.of(
-                                "documentNumber", "DOC-" + suffix,
-                                "phone", "3001234567",
-                                "categoryIds", List.of(categoryId),
-                                "description", "Técnico de integración",
-                                "documentPhotoUrl", "/v1/files/document-" + suffix + ".pdf",
-                                "workExperienceDescription", "Cinco años de experiencia",
-                                "latitude", 4.711,
-                                "longitude", -74.0721
+                        .content(body(Map.ofEntries(
+                                Map.entry("documentNumber", "DOC-" + suffix),
+                                Map.entry("phone", "3001234567"),
+                                Map.entry("categoryIds", List.of(categoryId)),
+                                Map.entry("description", "Técnico de integración"),
+                                Map.entry("documentPhotoUrl", "/v1/files/document-" + suffix + ".pdf"),
+                                Map.entry("workExperienceDescription", "Cinco años de experiencia"),
+                                Map.entry("latitude", 4.711),
+                                Map.entry("longitude", -74.0721),
+                                Map.entry("homeAddress", "Calle 10 # 20-30"),
+                                Map.entry("homeLatitude", 4.711),
+                                Map.entry("homeLongitude", -74.0721)
                         ))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString());

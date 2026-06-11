@@ -11,5 +11,6 @@ public record UserProfileResponse(
         String documentPhotoUrl, String certificatePhotoUrl, String workExperienceDescription,
         BigDecimal averageRating, long completedServicesCount, long paidServicesCount,
         VerificationStatus verificationStatus, boolean emailVerified, boolean phoneVerified,
-        boolean documentsVerified
+        boolean documentsVerified, String homeAddress, Double homeLatitude, Double homeLongitude,
+        String homeCity, String homeNeighborhood
 ) {}

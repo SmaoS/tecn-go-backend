@@ -15,5 +15,6 @@ public record ServiceRequestResponse(
         List<String> technicianCategories,
         UUID categoryId, String categoryName, String description, String address,
         Double latitude, Double longitude, Double distanceKm, BigDecimal estimatedPrice,
-        BigDecimal technicianPrice, BigDecimal finalPrice, RequestStatus status, Instant createdAt
+        BigDecimal technicianPrice, BigDecimal finalPrice, RequestStatus status, Instant createdAt,
+        long serviceImagesCount, String firstServiceImageUrl, List<ServiceRequestImageResponse> images
 ) {}

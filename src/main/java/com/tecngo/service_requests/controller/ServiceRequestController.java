@@ -74,6 +74,14 @@ public class ServiceRequestController {
         return service.confirmQuote(id, request.quoteId(), user);
     }
 
+    @PutMapping("/{id}/quotes/{quoteId}/reject")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ServiceQuoteResponse rejectQuote(@PathVariable java.util.UUID id,
+                                            @PathVariable java.util.UUID quoteId,
+                                            @AuthenticationPrincipal User user) {
+        return service.rejectQuote(id, quoteId, user);
+    }
+
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('CLIENT', 'TECHNICIAN')")
     public ServiceRequestResponse updateStatus(@PathVariable java.util.UUID id,

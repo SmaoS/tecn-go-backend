@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -53,6 +54,18 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.toMap(error -> error.getField(), error -> error.getDefaultMessage(),
                         (first, ignored) -> first));
         return error(HttpStatus.BAD_REQUEST, "Validation failed", fields);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    ApiError integrity(DataIntegrityViolationException ex) {
+        return error(HttpStatus.CONFLICT, "The operation conflicts with existing data", null);
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    ApiError unexpected(Exception ex) {
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", null);
     }
 
     private ApiError error(HttpStatus status, String message, Map<String, String> fields) {

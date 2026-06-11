@@ -44,6 +44,14 @@ public class UserService {
         user.setDocumentPhotoUrl(newDocument);
         user.setCertificatePhotoUrl(clean(request.certificatePhotoUrl()));
         user.setWorkExperienceDescription(clean(request.workExperienceDescription()));
+        user.setHomeAddress(clean(request.homeAddress()));
+        user.setHomeLatitude(request.homeLatitude());
+        user.setHomeLongitude(request.homeLongitude());
+        user.setHomeCity(clean(request.homeCity()));
+        user.setHomeNeighborhood(clean(request.homeNeighborhood()));
+        if (user.getRole() == Role.TECHNICIAN && user.getHomeAddress() == null) {
+            throw new IllegalArgumentException("Home address is required for technicians");
+        }
         updateVerificationStatus(user, previousDocument, newDocument);
         return map(users.save(user));
     }
@@ -54,7 +62,8 @@ public class UserService {
                 user.getWorkExperienceDescription(), user.getAverageRating(),
                 user.getCompletedServicesCount(), user.getPaidServicesCount(),
                 user.getVerificationStatus(), user.isEmailVerified(), user.isPhoneVerified(),
-                user.isDocumentsVerified());
+                user.isDocumentsVerified(), user.getHomeAddress(), user.getHomeLatitude(),
+                user.getHomeLongitude(), user.getHomeCity(), user.getHomeNeighborhood());
     }
 
     public void markPendingWhenEvidenceChanges(User user, String previousDocument, String newDocument) {

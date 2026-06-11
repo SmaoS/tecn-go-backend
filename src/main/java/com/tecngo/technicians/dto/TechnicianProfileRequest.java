@@ -18,5 +18,10 @@ public record TechnicianProfileRequest(
         String certificatePhotoUrl,
         @NotBlank @Size(max = 1000) String workExperienceDescription,
         @NotNull Double latitude,
-        @NotNull Double longitude
+        @NotNull Double longitude,
+        @NotBlank @Size(max = 255) String homeAddress,
+        @NotNull Double homeLatitude,
+        @NotNull Double homeLongitude,
+        @Size(max = 120) String homeCity,
+        @Size(max = 120) String homeNeighborhood
 ) {}

@@ -33,6 +33,11 @@ public class VerifierService {
                 .verificationStatus(VerificationStatus.VERIFIED)
                 .verifiedAt(java.time.Instant.now())
                 .verifiedBy(admin)
+                .homeAddress(clean(request.homeAddress()))
+                .homeLatitude(request.homeLatitude())
+                .homeLongitude(request.homeLongitude())
+                .homeCity(clean(request.homeCity()))
+                .homeNeighborhood(clean(request.homeNeighborhood()))
                 .build());
         return map(verifier);
     }
@@ -44,5 +49,9 @@ public class VerifierService {
 
     private VerifierResponse map(User user) {
         return new VerifierResponse(user.getId(), user.getFullName(), user.getEmail(), user.getCreatedAt());
+    }
+
+    private String clean(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

@@ -18,12 +18,20 @@ public class PlatformFeeCalculator {
     }
 
     public BigDecimal fee(BigDecimal amount) {
-        return amount.multiply(percentage)
+        return fee(amount, percentage);
+    }
+
+    public BigDecimal fee(BigDecimal amount, BigDecimal appliedPercentage) {
+        return amount.multiply(appliedPercentage)
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
     public BigDecimal technicianAmount(BigDecimal amount) {
-        return amount.subtract(fee(amount)).setScale(2, RoundingMode.HALF_UP);
+        return technicianAmount(amount, percentage);
+    }
+
+    public BigDecimal technicianAmount(BigDecimal amount, BigDecimal appliedPercentage) {
+        return amount.subtract(fee(amount, appliedPercentage)).setScale(2, RoundingMode.HALF_UP);
     }
 
     public BigDecimal percentage() {

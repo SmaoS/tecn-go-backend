@@ -1,0 +1,119 @@
+package com.tecngo.system_parameters.service;
+
+import com.tecngo.shared.exception.NotFoundException;
+import com.tecngo.system_parameters.dto.SystemParameterResponse;
+import com.tecngo.system_parameters.entity.ParameterType;
+import com.tecngo.system_parameters.entity.SystemParameter;
+import com.tecngo.system_parameters.repository.SystemParameterRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class SystemParameterService {
+    public static final String QUOTE_EXPIRATION_MINUTES = "QUOTE_EXPIRATION_MINUTES";
+    public static final String PLATFORM_COMMISSION_PERCENTAGE = "PLATFORM_COMMISSION_PERCENTAGE";
+    public static final String TECHNICIAN_OFFLINE_AFTER_MINUTES = "TECHNICIAN_OFFLINE_AFTER_MINUTES";
+    public static final String LOCATION_POLLING_SECONDS = "LOCATION_POLLING_SECONDS";
+    public static final String SERVICE_POLLING_SECONDS = "SERVICE_POLLING_SECONDS";
+    public static final String MAX_SERVICE_REQUEST_IMAGES = "MAX_SERVICE_REQUEST_IMAGES";
+
+    private final SystemParameterRepository repository;
+
+    @Value("${app.parameters.quote-expiration-minutes:10}")
+    private int quoteExpirationFallback;
+    @Value("${app.parameters.platform-commission-percentage:10}")
+    private BigDecimal commissionFallback;
+    @Value("${app.parameters.technician-offline-after-minutes:3}")
+    private int offlineFallback;
+    @Value("${app.parameters.max-service-request-images:5}")
+    private int maxImagesFallback;
+
+    @Transactional(readOnly = true)
+    public List<SystemParameterResponse> list() {
+        return repository.findAll().stream()
+                .sorted(java.util.Comparator.comparing(SystemParameter::getKey))
+                .map(this::map)
+                .toList();
+    }
+
+    @Transactional
+    public SystemParameterResponse update(String key, String value) {
+        SystemParameter parameter = repository.findByKeyAndActiveTrue(key)
+                .orElseThrow(() -> new NotFoundException("System parameter not found"));
+        validate(parameter, value);
+        parameter.setValue(value.trim());
+        return map(repository.save(parameter));
+    }
+
+    public int quoteExpirationMinutes() {
+        return integer(QUOTE_EXPIRATION_MINUTES, quoteExpirationFallback);
+    }
+
+    public BigDecimal platformCommissionPercentage() {
+        return decimal(PLATFORM_COMMISSION_PERCENTAGE, commissionFallback);
+    }
+
+    public int technicianOfflineAfterMinutes() {
+        return integer(TECHNICIAN_OFFLINE_AFTER_MINUTES, offlineFallback);
+    }
+
+    public int maxServiceRequestImages() {
+        return integer(MAX_SERVICE_REQUEST_IMAGES, maxImagesFallback);
+    }
+
+    private int integer(String key, int fallback) {
+        return repository.findByKeyAndActiveTrue(key)
+                .map(item -> Integer.parseInt(item.getValue()))
+                .orElse(fallback);
+    }
+
+    private BigDecimal decimal(String key, BigDecimal fallback) {
+        return repository.findByKeyAndActiveTrue(key)
+                .map(item -> new BigDecimal(item.getValue()))
+                .orElse(fallback);
+    }
+
+    private void validate(SystemParameter parameter, String raw) {
+        String value = raw.trim();
+        BigDecimal number = null;
+        if (parameter.getType() == ParameterType.INTEGER) {
+            try {
+                number = new BigDecimal(Integer.parseInt(value));
+            } catch (NumberFormatException exception) {
+                throw new IllegalArgumentException("Parameter value must be an integer");
+            }
+        } else if (parameter.getType() == ParameterType.DECIMAL) {
+            try {
+                number = new BigDecimal(value);
+            } catch (NumberFormatException exception) {
+                throw new IllegalArgumentException("Parameter value must be numeric");
+            }
+        } else if (parameter.getType() == ParameterType.BOOLEAN
+                && !value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+            throw new IllegalArgumentException("Parameter value must be true or false");
+        }
+        if (number != null && number.signum() < 0) {
+            throw new IllegalArgumentException("Parameter value cannot be negative");
+        }
+        if (parameter.getKey().equals(QUOTE_EXPIRATION_MINUTES)
+                && (number.intValue() < 1 || number.intValue() > 60)) {
+            throw new IllegalArgumentException("QUOTE_EXPIRATION_MINUTES must be between 1 and 60");
+        }
+        if (parameter.getKey().equals(PLATFORM_COMMISSION_PERCENTAGE)
+                && (number.compareTo(BigDecimal.ZERO) < 0
+                || number.compareTo(BigDecimal.valueOf(50)) > 0)) {
+            throw new IllegalArgumentException("PLATFORM_COMMISSION_PERCENTAGE must be between 0 and 50");
+        }
+    }
+
+    private SystemParameterResponse map(SystemParameter item) {
+        return new SystemParameterResponse(item.getId(), item.getKey(), item.getValue(),
+                item.getDescription(), item.getType(), item.isActive(), item.getUpdatedAt());
+    }
+}

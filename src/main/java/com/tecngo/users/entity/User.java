@@ -88,6 +88,18 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private long paidServicesCount;
 
+    @Column(length = 255)
+    private String homeAddress;
+
+    private Double homeLatitude;
+    private Double homeLongitude;
+
+    @Column(length = 120)
+    private String homeCity;
+
+    @Column(length = 120)
+    private String homeNeighborhood;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = Instant.now();

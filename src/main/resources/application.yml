@@ -60,6 +60,13 @@ app:
     credentials-base64: ${FIREBASE_CREDENTIALS_BASE64:}
   notifications:
     new-request-radius-km: ${NEW_REQUEST_NOTIFICATION_RADIUS_KM:25}
+  parameters:
+    quote-expiration-minutes: ${QUOTE_EXPIRATION_MINUTES:10}
+    platform-commission-percentage: ${PLATFORM_COMMISSION_PERCENTAGE:10}
+    technician-offline-after-minutes: ${TECHNICIAN_OFFLINE_AFTER_MINUTES:3}
+    location-polling-seconds: ${LOCATION_POLLING_SECONDS:10}
+    service-polling-seconds: ${SERVICE_POLLING_SECONDS:10}
+    max-service-request-images: ${MAX_SERVICE_REQUEST_IMAGES:5}
 
 info:
   app:

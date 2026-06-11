@@ -33,16 +33,22 @@ public class CloudinaryService implements FileStorage {
 
     @Override
     public StoredFile store(MultipartFile file, boolean publicAccess) {
+        return store(file, publicAccess, "tecngo", ALLOWED_TYPES);
+    }
+
+    @Override
+    public StoredFile store(MultipartFile file, boolean publicAccess, String folder,
+                            Set<String> allowedTypes) {
         String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
         if (file.isEmpty()) throw new IllegalArgumentException("File is required");
-        if (!ALLOWED_TYPES.contains(contentType)) {
-            throw new IllegalArgumentException("Only JPG, PNG and PDF files are allowed");
+        if (!allowedTypes.contains(contentType)) {
+            throw new IllegalArgumentException("File type is not allowed");
         }
         if (file.getSize() > maxBytes) throw new IllegalArgumentException("File exceeds the configured maximum size");
         try {
             String resourceType = contentType.equals("application/pdf") ? "raw" : "image";
             Map<?, ?> result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                    "folder", "tecngo",
+                    "folder", folder,
                     "resource_type", resourceType,
                     "type", publicAccess ? "upload" : "authenticated",
                     "use_filename", false,
@@ -59,6 +65,15 @@ public class CloudinaryService implements FileStorage {
                     secureUrl, publicId, publicAccess);
         } catch (IOException exception) {
             throw new IllegalStateException("Cloudinary upload failed", exception);
+        }
+    }
+
+    @Override
+    public void delete(String publicId) {
+        try {
+            cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", "image"));
+        } catch (IOException exception) {
+            throw new IllegalStateException("Cloudinary delete failed", exception);
         }
     }
 

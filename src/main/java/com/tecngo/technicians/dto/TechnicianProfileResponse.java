@@ -13,5 +13,7 @@ public record TechnicianProfileResponse(
         String phone, List<ServiceCategoryResponse> categories, String description, Double latitude,
         Double longitude, TechnicianStatus status, String profilePhotoUrl, String documentPhotoUrl,
         String certificatePhotoUrl, String workExperienceDescription, BigDecimal averageRating,
-        long completedServicesCount, long paidServicesCount, VerificationStatus verificationStatus
+        long completedServicesCount, long paidServicesCount, VerificationStatus verificationStatus,
+        String homeAddress, Double homeLatitude, Double homeLongitude, String homeCity,
+        String homeNeighborhood
 ) {}

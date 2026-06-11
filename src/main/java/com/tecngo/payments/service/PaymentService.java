@@ -15,6 +15,7 @@ import com.tecngo.shared.exception.NotFoundException;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.repository.UserRepository;
+import com.tecngo.system_parameters.service.SystemParameterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class PaymentService {
     private final PaymentRepository payments;
     private final ServiceRequestRepository requests;
     private final PlatformFeeCalculator feeCalculator;
+    private final SystemParameterService parameters;
     private final UserRepository users;
 
     @Transactional
@@ -50,14 +52,16 @@ public class PaymentService {
         }
 
         BigDecimal amount = request.getFinalPrice();
-        BigDecimal platformFee = feeCalculator.fee(amount);
+        BigDecimal percentage = parameters.platformCommissionPercentage();
+        BigDecimal platformFee = feeCalculator.fee(amount, percentage);
         Payment payment = payments.save(Payment.builder()
                 .serviceRequest(request)
                 .client(client)
                 .technician(request.getTechnician())
                 .amount(amount)
                 .platformFee(platformFee)
-                .technicianAmount(feeCalculator.technicianAmount(amount))
+                .platformCommissionPercentage(percentage)
+                .technicianAmount(feeCalculator.technicianAmount(amount, percentage))
                 .status(PaymentStatus.PAID)
                 .method(PaymentMethod.CASH)
                 .build());
@@ -101,6 +105,7 @@ public class PaymentService {
                 payment.getClient().getId(), payment.getClient().getFullName(),
                 payment.getTechnician().getId(), payment.getTechnician().getFullName(),
                 payment.getAmount(), payment.getPlatformFee(), payment.getTechnicianAmount(),
+                payment.getPlatformCommissionPercentage(),
                 payment.getStatus(), payment.getMethod(), payment.getCreatedAt());
     }
 

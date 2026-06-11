@@ -5,6 +5,7 @@ import com.tecngo.service_requests.entity.RequestStatus;
 import com.tecngo.service_requests.entity.ServiceRequest;
 import com.tecngo.service_requests.repository.ServiceRequestRepository;
 import com.tecngo.service_requests.repository.ServiceQuoteRepository;
+import com.tecngo.service_requests.repository.ServiceRequestImageRepository;
 import com.tecngo.service_requests.entity.QuoteStatus;
 import com.tecngo.service_requests.entity.ServiceQuote;
 import com.tecngo.services.service.ServiceCategoryService;
@@ -25,7 +26,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
+import com.tecngo.system_parameters.service.SystemParameterService;
+import com.tecngo.technician_location.repository.TechnicianLocationRepository;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.List;
 import java.util.UUID;
@@ -37,12 +42,15 @@ import java.util.Comparator;
 public class ServiceRequestService {
     private final ServiceRequestRepository requests;
     private final ServiceQuoteRepository quotes;
+    private final ServiceRequestImageRepository images;
     private final ServiceCategoryService categories;
     private final TechnicianProfileService technicianProfiles;
     private final TechnicianProfileRepository technicianProfileRepository;
     private final HaversineDistance distance;
     private final ApplicationEventPublisher events;
     private final EmailVerificationService emailVerification;
+    private final SystemParameterService parameters;
+    private final TechnicianLocationRepository technicianLocations;
     @Value("${app.notifications.new-request-radius-km:25}")
     private double newRequestRadiusKm;
 
@@ -90,8 +98,13 @@ public class ServiceRequestService {
             throw new ConflictException("Technician location is required");
         }
         List<UUID> categoryIds = profile.getCategories().stream().map(item -> item.getId()).toList();
+        var liveLocation = technicianLocations.findByTechnicianId(technician.getId()).orElse(null);
+        double originLatitude = liveLocation != null && liveLocation.isOnline()
+                ? liveLocation.getLatitude() : profile.getLatitude();
+        double originLongitude = liveLocation != null && liveLocation.isOnline()
+                ? liveLocation.getLongitude() : profile.getLongitude();
         return requests.findAvailable(RequestStatus.QUOTE_PENDING, categoryIds).stream()
-                .map(item -> map(item, distance.kilometers(profile.getLatitude(), profile.getLongitude(),
+                .map(item -> map(item, distance.kilometers(originLatitude, originLongitude,
                         item.getLatitude(), item.getLongitude()), true))
                 .filter(item -> item.distanceKm() <= radiusKm)
                 .sorted(Comparator.comparing(ServiceRequestResponse::distanceKm))
@@ -111,14 +124,26 @@ public class ServiceRequestService {
         boolean supportsCategory = profile.getCategories().stream()
                 .anyMatch(category -> category.getId().equals(request.getCategory().getId()));
         if (!supportsCategory) throw new ForbiddenException("Technician does not support this category");
-        ServiceQuote quote = quotes.findByServiceRequestIdAndTechnicianId(id, technician.getId())
-                .orElseGet(() -> ServiceQuote.builder()
-                        .serviceRequest(request)
-                        .technician(technician)
-                        .status(QuoteStatus.PENDING)
-                        .build());
-        if (quote.getStatus() != QuoteStatus.PENDING) {
-            throw new ConflictException("This quote can no longer be changed");
+        var existing = quotes.findFirstByServiceRequestIdAndTechnicianIdAndStatus(
+                id, technician.getId(), QuoteStatus.PENDING);
+        if (existing.isPresent()) {
+            ServiceQuote pending = existing.get();
+            if (pending.getExpiresAt().isAfter(Instant.now())) {
+                throw new ConflictException(
+                        "You already have a pending quote for this service. Wait for the client response or expiration.");
+            }
+            pending.setStatus(QuoteStatus.EXPIRED);
+            pending.setRespondedAt(Instant.now());
+            quotes.saveAndFlush(pending);
+        }
+        ServiceQuote quote = ServiceQuote.builder()
+                .serviceRequest(request)
+                .technician(technician)
+                .status(QuoteStatus.PENDING)
+                .expiresAt(Instant.now().plus(parameters.quoteExpirationMinutes(), ChronoUnit.MINUTES))
+                .build();
+        if (technicianPrice == null || technicianPrice.signum() <= 0) {
+            throw new IllegalArgumentException("Quote price must be greater than zero");
         }
         quote.setPrice(technicianPrice);
         quote.setDescription(clean(description));
@@ -143,10 +168,19 @@ public class ServiceRequestService {
         if (!selected.getServiceRequest().getId().equals(id) || selected.getStatus() != QuoteStatus.PENDING) {
             throw new ConflictException("Quote is not available for this service request");
         }
+        if (!selected.getExpiresAt().isAfter(Instant.now())) {
+            selected.setStatus(QuoteStatus.EXPIRED);
+            selected.setRespondedAt(Instant.now());
+            throw new ConflictException("Quote has expired");
+        }
         selected.setStatus(QuoteStatus.ACCEPTED);
+        selected.setRespondedAt(Instant.now());
         quotes.findByServiceRequestIdAndStatus(id, QuoteStatus.PENDING).stream()
                 .filter(item -> !item.getId().equals(selected.getId()))
-                .forEach(item -> item.setStatus(QuoteStatus.REJECTED));
+                .forEach(item -> {
+                    item.setStatus(QuoteStatus.REJECTED);
+                    item.setRespondedAt(Instant.now());
+                });
         request.setTechnician(selected.getTechnician());
         request.setTechnicianPrice(selected.getPrice());
         request.setFinalPrice(selected.getPrice());
@@ -165,6 +199,27 @@ public class ServiceRequestService {
         return quotes.findByServiceRequestIdOrderByCreatedAtAsc(id).stream()
                 .map(this::mapQuote)
                 .toList();
+    }
+
+    @Transactional
+    public ServiceQuoteResponse rejectQuote(UUID requestId, UUID quoteId, User client) {
+        ServiceRequest request = requests.findByIdForUpdate(requestId)
+                .orElseThrow(() -> new NotFoundException("Service request not found"));
+        requireClientOwner(request, client);
+        ServiceQuote quote = quotes.findById(quoteId)
+                .filter(item -> item.getServiceRequest().getId().equals(requestId))
+                .orElseThrow(() -> new NotFoundException("Quote not found"));
+        if (quote.getStatus() != QuoteStatus.PENDING) {
+            throw new ConflictException("Quote is no longer pending");
+        }
+        if (!quote.getExpiresAt().isAfter(Instant.now())) {
+            quote.setStatus(QuoteStatus.EXPIRED);
+            quote.setRespondedAt(Instant.now());
+            throw new ConflictException("Quote has expired");
+        }
+        quote.setStatus(QuoteStatus.REJECTED);
+        quote.setRespondedAt(Instant.now());
+        return mapQuote(quote);
     }
 
     @Transactional
@@ -257,6 +312,7 @@ public class ServiceRequestService {
 
     private ServiceRequestResponse map(ServiceRequest item, Double distanceKm, boolean approximateLocation) {
         User technician = item.getTechnician();
+        var serviceImages = images.findByServiceRequestIdOrderByCreatedAtAsc(item.getId());
         return new ServiceRequestResponse(item.getId(), item.getClient().getId(), item.getClient().getFullName(),
                 technician == null ? null : technician.getId(), technician == null ? null : technician.getFullName(),
                 item.getClient().getProfilePhotoUrl(), item.getClient().getAverageRating(),
@@ -270,7 +326,12 @@ public class ServiceRequestService {
                 approximateLocation ? approximate(item.getAddress()) : item.getAddress(),
                 approximateLocation ? null : item.getLatitude(), approximateLocation ? null : item.getLongitude(),
                 distanceKm, item.getEstimatedPrice(),
-                item.getTechnicianPrice(), item.getFinalPrice(), item.getStatus(), item.getCreatedAt());
+                item.getTechnicianPrice(), item.getFinalPrice(), item.getStatus(), item.getCreatedAt(),
+                serviceImages.size(),
+                serviceImages.isEmpty() ? null : serviceImages.getFirst().getImageUrl(),
+                serviceImages.stream().map(image -> new ServiceRequestImageResponse(
+                        image.getId(), item.getId(), image.getImageUrl(), image.getPublicId(),
+                        image.getCreatedAt())).toList());
     }
 
     private ServiceQuoteResponse mapQuote(ServiceQuote quote) {
@@ -289,7 +350,9 @@ public class ServiceRequestService {
                 quote.getDescription(),
                 quote.getStatus(),
                 quote.getCreatedAt(),
-                quote.getUpdatedAt()
+                quote.getUpdatedAt(),
+                quote.getExpiresAt(),
+                quote.getRespondedAt()
         );
     }
 

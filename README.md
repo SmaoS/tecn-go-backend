@@ -6,7 +6,8 @@ Spring Security con JWT, JPA/Hibernate y OpenAPI.
 ## Módulos
 
 `auth`, `users`, `clients`, `technicians`, `services`, `service_requests`, `payments`,
-`ratings`, `notifications`, `geolocation`, `admin` y `shared`.
+`ratings`, `notifications`, `geolocation`, `technician_location`,
+`system_parameters`, `admin` y `shared`.
 
 Autenticación, usuarios, categorías, perfiles técnicos, geolocalización, administración y solicitudes
 tienen implementación funcional. El backend se mantiene como monolito modular.
@@ -102,6 +103,13 @@ correo. Sin `RESEND_API_KEY`, desarrollo escribe el enlace en los logs.
 | PUT | `/api/v1/service-requests/{id}/quote` | TECHNICIAN aprobado |
 | GET | `/api/v1/service-requests/{id}/quotes` | CLIENT propietario |
 | PUT | `/api/v1/service-requests/{id}/confirm-quote` | CLIENT propietario |
+| PUT | `/api/v1/service-requests/{id}/quotes/{quoteId}/reject` | CLIENT propietario |
+| POST, GET | `/api/v1/service-requests/{id}/images` | Participantes según estado |
+| DELETE | `/api/v1/service-requests/{id}/images/{imageId}` | CLIENT antes de aceptación |
+| GET, PUT | `/api/v1/technicians/me/location` | TECHNICIAN aprobado |
+| GET | `/api/v1/service-requests/{id}/technician-location` | CLIENT con servicio activo |
+| GET | `/api/v1/admin/technicians/locations` | ADMIN |
+| GET, PUT | `/api/v1/admin/system-parameters` | ADMIN |
 | PUT | `/api/v1/service-requests/{id}/status` | CLIENT o técnico asignado |
 | GET | `/api/v1/service-requests/{id}/chat` | Participantes |
 | POST | `/api/v1/service-requests/{id}/chat/messages` | Participantes |
@@ -156,10 +164,9 @@ Las solicitudes nuevas requieren dirección, latitud y longitud. El endpoint de
 disponibles usa Haversine, filtra por categorías del técnico y acepta radios de 1 a
 100 km.
 
-Cada técnico aprobado puede registrar una cotización por solicitud con
-`technicianPrice` y una `description` opcional. La cotización puede actualizarse
-mientras siga pendiente y la solicitud permanece en `QUOTE_PENDING`, visible para
-otros técnicos cercanos.
+Cada técnico aprobado puede tener una sola cotización pendiente por solicitud. Una
+cotización expira según `QUOTE_EXPIRATION_MINUTES`; después de rechazo o expiración el
+técnico puede crear otra. Un proceso idempotente marca vencimientos cada minuto.
 
 El cliente consulta todas las ofertas con
 `GET /api/v1/service-requests/{id}/quotes` y selecciona una enviando:
@@ -178,9 +185,8 @@ cotizaciones concurrentemente.
 ## Pagos y calificaciones
 
 El MVP registra pagos en efectivo cuando el servicio está `COMPLETED`. La comisión se
-configura con `PLATFORM_FEE_PERCENTAGE` y por defecto es 10 %. Al confirmar el pago se
-guardan el valor total, la comisión y la ganancia neta del técnico, y la solicitud pasa
-a `PAID`.
+lee de `PLATFORM_COMMISSION_PERCENTAGE` y el porcentaje aplicado se guarda en cada pago
+para preservar el histórico.
 
 Solo el cliente propietario puede calificar una solicitud pagada y puede hacerlo una
 sola vez. El técnico también puede calificar al cliente una vez después del pago. El
@@ -221,6 +227,11 @@ recomienda enviar el archivo completo codificado en Base64 mediante
 La migración `V11` actualiza el constraint PostgreSQL de `notifications.type` para
 aceptar todos los tipos anteriores. Debe desplegarse antes de generar nuevas
 notificaciones con `NEW_QUOTE`, `NEW_REQUEST` o los estados de seguimiento.
+
+La migración `V12` incorpora domicilio, GPS único por técnico, parámetros
+administrables, expiración de cotizaciones, porcentaje histórico de comisión e imágenes
+opcionales. Cloudinary usa `tecngo/profiles`, `tecngo/documents`,
+`tecngo/certificates` y `tecngo/service-requests`.
 
 ## Pruebas y build
 

@@ -9,10 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "service_quotes", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_service_quotes_request_technician",
-                columnNames = {"service_request_id", "technician_id"})
-})
+@Table(name = "service_quotes")
 @Getter
 @Setter
 @Builder
@@ -45,6 +42,9 @@ public class ServiceQuote {
     private Instant createdAt;
 
     private Instant updatedAt;
+    @Column(nullable = false)
+    private Instant expiresAt;
+    private Instant respondedAt;
 
     @PrePersist
     void onCreate() {
