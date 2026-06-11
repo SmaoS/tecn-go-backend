@@ -6,6 +6,8 @@ import com.tecngo.shared.exception.ForbiddenException;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.repository.UserRepository;
+import com.tecngo.service_evidence.repository.ServiceEvidenceRepository;
+import com.tecngo.payment_proofs.repository.PaymentProofRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
@@ -20,6 +22,8 @@ import java.util.Set;
 public class FileController {
     private final FileStorage storage;
     private final UserRepository users;
+    private final ServiceEvidenceRepository evidences;
+    private final PaymentProofRepository paymentProofs;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
@@ -64,6 +68,19 @@ public class FileController {
     private boolean canViewPrivate(User viewer, String url) {
         if (viewer == null) return false;
         if (viewer.getRole() == Role.ADMIN || viewer.getRole() == Role.VERIFIER) return true;
-        return url.equals(viewer.getDocumentPhotoUrl()) || url.equals(viewer.getCertificatePhotoUrl());
+        if (url.equals(viewer.getDocumentPhotoUrl()) || url.equals(viewer.getCertificatePhotoUrl())) return true;
+        var evidence = evidences.findByFileUrl(url).orElse(null);
+        if (evidence != null) {
+            var request = evidence.getServiceRequest();
+            return request.getClient().getId().equals(viewer.getId())
+                    || request.getTechnician() != null && request.getTechnician().getId().equals(viewer.getId());
+        }
+        var proof = paymentProofs.findByFileUrl(url).orElse(null);
+        if (proof != null) {
+            var request = proof.getServiceRequest();
+            return request.getClient().getId().equals(viewer.getId())
+                    || request.getTechnician() != null && request.getTechnician().getId().equals(viewer.getId());
+        }
+        return false;
     }
 }

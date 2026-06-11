@@ -38,9 +38,11 @@ public class UserService {
         }
         String previousDocument = clean(user.getDocumentPhotoUrl());
         String newDocument = clean(request.documentPhotoUrl());
+        String previousProfilePhoto = clean(user.getProfilePhotoUrl());
+        String newProfilePhoto = clean(request.profilePhotoUrl());
         user.setFullName(request.fullName().trim());
         user.setPhone(clean(request.phone()));
-        user.setProfilePhotoUrl(clean(request.profilePhotoUrl()));
+        user.setProfilePhotoUrl(newProfilePhoto);
         user.setDocumentPhotoUrl(newDocument);
         user.setCertificatePhotoUrl(clean(request.certificatePhotoUrl()));
         user.setWorkExperienceDescription(clean(request.workExperienceDescription()));
@@ -51,6 +53,11 @@ public class UserService {
         user.setHomeNeighborhood(clean(request.homeNeighborhood()));
         if (user.getRole() == Role.TECHNICIAN && user.getHomeAddress() == null) {
             throw new IllegalArgumentException("Home address is required for technicians");
+        }
+        if (!java.util.Objects.equals(previousProfilePhoto, newProfilePhoto)) {
+            user.setProfilePhotoFaceValidated(false);
+            user.setProfilePhotoVerifiedBy(null);
+            user.setProfilePhotoVerifiedAt(null);
         }
         updateVerificationStatus(user, previousDocument, newDocument);
         return map(users.save(user));
@@ -63,7 +70,9 @@ public class UserService {
                 user.getCompletedServicesCount(), user.getPaidServicesCount(),
                 user.getVerificationStatus(), user.isEmailVerified(), user.isPhoneVerified(),
                 user.isDocumentsVerified(), user.getHomeAddress(), user.getHomeLatitude(),
-                user.getHomeLongitude(), user.getHomeCity(), user.getHomeNeighborhood());
+                user.getHomeLongitude(), user.getHomeCity(), user.getHomeNeighborhood(),
+                user.getAccountStatus(), user.getInactiveReason(), user.getInactiveComment(),
+                user.isProfilePhotoFaceValidated());
     }
 
     public void markPendingWhenEvidenceChanges(User user, String previousDocument, String newDocument) {

@@ -67,6 +67,10 @@ app:
     location-polling-seconds: ${LOCATION_POLLING_SECONDS:10}
     service-polling-seconds: ${SERVICE_POLLING_SECONDS:10}
     max-service-request-images: ${MAX_SERVICE_REQUEST_IMAGES:5}
+    max-service-evidence-files: ${MAX_SERVICE_EVIDENCE_FILES:10}
+    max-payment-proof-files: ${MAX_PAYMENT_PROOF_FILES:3}
+    require-legal-acceptance: ${REQUIRE_LEGAL_ACCEPTANCE:true}
+    require-profile-face-detection: ${REQUIRE_PROFILE_FACE_DETECTION:false}
 
 info:
   app:

@@ -22,6 +22,10 @@ public class SystemParameterService {
     public static final String LOCATION_POLLING_SECONDS = "LOCATION_POLLING_SECONDS";
     public static final String SERVICE_POLLING_SECONDS = "SERVICE_POLLING_SECONDS";
     public static final String MAX_SERVICE_REQUEST_IMAGES = "MAX_SERVICE_REQUEST_IMAGES";
+    public static final String MAX_SERVICE_EVIDENCE_FILES = "MAX_SERVICE_EVIDENCE_FILES";
+    public static final String MAX_PAYMENT_PROOF_FILES = "MAX_PAYMENT_PROOF_FILES";
+    public static final String REQUIRE_LEGAL_ACCEPTANCE = "REQUIRE_LEGAL_ACCEPTANCE";
+    public static final String REQUIRE_PROFILE_FACE_DETECTION = "REQUIRE_PROFILE_FACE_DETECTION";
 
     private final SystemParameterRepository repository;
 
@@ -33,6 +37,14 @@ public class SystemParameterService {
     private int offlineFallback;
     @Value("${app.parameters.max-service-request-images:5}")
     private int maxImagesFallback;
+    @Value("${app.parameters.max-service-evidence-files:10}")
+    private int maxEvidenceFallback;
+    @Value("${app.parameters.max-payment-proof-files:3}")
+    private int maxPaymentProofFallback;
+    @Value("${app.parameters.require-legal-acceptance:true}")
+    private boolean requireLegalFallback;
+    @Value("${app.parameters.require-profile-face-detection:false}")
+    private boolean requireFaceDetectionFallback;
 
     @Transactional(readOnly = true)
     public List<SystemParameterResponse> list() {
@@ -65,6 +77,16 @@ public class SystemParameterService {
 
     public int maxServiceRequestImages() {
         return integer(MAX_SERVICE_REQUEST_IMAGES, maxImagesFallback);
+    }
+    public int maxServiceEvidenceFiles() { return integer(MAX_SERVICE_EVIDENCE_FILES, maxEvidenceFallback); }
+    public int maxPaymentProofFiles() { return integer(MAX_PAYMENT_PROOF_FILES, maxPaymentProofFallback); }
+    public boolean requireLegalAcceptance() {
+        return repository.findByKeyAndActiveTrue(REQUIRE_LEGAL_ACCEPTANCE)
+                .map(item -> Boolean.parseBoolean(item.getValue())).orElse(requireLegalFallback);
+    }
+    public boolean requireProfileFaceDetection() {
+        return repository.findByKeyAndActiveTrue(REQUIRE_PROFILE_FACE_DETECTION)
+                .map(item -> Boolean.parseBoolean(item.getValue())).orElse(requireFaceDetectionFallback);
     }
 
     private int integer(String key, int fallback) {

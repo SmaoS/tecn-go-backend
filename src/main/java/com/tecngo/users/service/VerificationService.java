@@ -58,6 +58,19 @@ public class VerificationService {
         return map(users.save(user));
     }
 
+    @Transactional
+    public UserVerificationResponse verifyProfilePhoto(UUID userId, User reviewer) {
+        User user = users.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        if (user.getProfilePhotoUrl() == null || user.getProfilePhotoUrl().isBlank()) {
+            throw new ConflictException("User does not have a profile photo");
+        }
+        user.setProfilePhotoFaceValidated(true);
+        user.setProfilePhotoVerifiedBy(reviewer);
+        user.setProfilePhotoVerifiedAt(Instant.now());
+        return map(users.save(user));
+    }
+
     private UserVerificationResponse map(User user) {
         return new UserVerificationResponse(
                 user.getId(),

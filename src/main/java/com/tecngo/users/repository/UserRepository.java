@@ -1,6 +1,7 @@
 package com.tecngo.users.repository;
 
 import com.tecngo.users.entity.User;
+import com.tecngo.users.entity.AccountStatus;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.VerificationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,4 +18,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByVerificationStatusOrderByCreatedAtAsc(VerificationStatus status);
     long countByVerificationStatus(VerificationStatus status);
     List<User> findByRoleOrderByCreatedAtDesc(Role role);
+    List<User> findByAccountStatusNotOrderByCreatedAtDesc(AccountStatus status);
 }

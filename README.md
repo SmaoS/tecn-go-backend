@@ -233,6 +233,23 @@ administrables, expiración de cotizaciones, porcentaje histórico de comisión 
 opcionales. Cloudinary usa `tecngo/profiles`, `tecngo/documents`,
 `tecngo/certificates` y `tecngo/service-requests`.
 
+## Evidencias, pagos, denuncias y documentos legales
+
+La migración `V13` agrega evidencias por servicio, comprobantes de pago con revisión,
+denuncias, inactivación auditada y documentos legales versionados. Los archivos usan
+Cloudinary en `tecngo/service-evidences`, `tecngo/payment-proofs` y
+`tecngo/profile-photos`.
+
+Cliente y técnico sólo acceden a archivos de servicios donde participan. `ADMIN` y
+`VERIFIER` revisan evidencias y comprobantes; únicamente `ADMIN` inactiva o reactiva
+usuarios. Una cuenta inactiva conserva login y consulta de perfil, pero no puede crear,
+cotizar, aceptar, avanzar ni pagar servicios.
+
+Los textos semilla tienen la marca `BORRADOR PARA REVISIÓN JURÍDICA`. La captura de
+perfil no hace reconocimiento biométrico ni comparación documental: queda
+`profilePhotoFaceValidated=false` hasta revisión manual mediante
+`PUT /v1/verifications/{userId}/profile-photo/verify`.
+
 ## Pruebas y build
 
 ```bash

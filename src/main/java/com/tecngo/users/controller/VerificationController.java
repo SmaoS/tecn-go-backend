@@ -34,4 +34,10 @@ public class VerificationController {
                                            @AuthenticationPrincipal User reviewer) {
         return service.reject(userId, reviewer);
     }
+
+    @PutMapping("/{userId}/profile-photo/verify")
+    public UserVerificationResponse verifyProfilePhoto(@PathVariable UUID userId,
+                                                       @AuthenticationPrincipal User reviewer) {
+        return service.verifyProfilePhoto(userId, reviewer);
+    }
 }

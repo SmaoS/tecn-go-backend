@@ -20,6 +20,8 @@ import com.tecngo.technicians.entity.TechnicianStatus;
 import com.tecngo.technicians.repository.TechnicianProfileRepository;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
+import com.tecngo.users.service.UserAccessService;
+import com.tecngo.legal.service.LegalService;
 import com.tecngo.verification.service.EmailVerificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -51,12 +53,15 @@ public class ServiceRequestService {
     private final EmailVerificationService emailVerification;
     private final SystemParameterService parameters;
     private final TechnicianLocationRepository technicianLocations;
+    private final UserAccessService userAccess;
+    private final LegalService legal;
     @Value("${app.notifications.new-request-radius-km:25}")
     private double newRequestRadiusKm;
 
     @Transactional
     public ServiceRequestResponse create(CreateServiceRequest request, User client) {
         requireRole(client, Role.CLIENT);
+        requireCriticalAccess(client);
         emailVerification.requireVerified(client);
         if (client.getDocumentPhotoUrl() == null || client.getDocumentPhotoUrl().isBlank()) {
             throw new ConflictException("Complete your profile with a document before requesting a service");
@@ -89,6 +94,7 @@ public class ServiceRequestService {
     @Transactional(readOnly = true)
     public List<ServiceRequestResponse> available(User technician, double radiusKm) {
         requireRole(technician, Role.TECHNICIAN);
+        userAccess.requireActive(technician);
         emailVerification.requireVerified(technician);
         if (radiusKm <= 0 || radiusKm > 100) {
             throw new IllegalArgumentException("radiusKm must be greater than 0 and at most 100");
@@ -114,6 +120,7 @@ public class ServiceRequestService {
     @Transactional
     public ServiceQuoteResponse quote(UUID id, BigDecimal technicianPrice, String description, User technician) {
         requireRole(technician, Role.TECHNICIAN);
+        requireCriticalAccess(technician);
         emailVerification.requireVerified(technician);
         var profile = technicianProfiles.approvedProfile(technician);
         ServiceRequest request = requests.findByIdForUpdate(id)
@@ -157,6 +164,7 @@ public class ServiceRequestService {
     @Transactional
     public ServiceRequestResponse confirmQuote(UUID id, UUID quoteId, User client) {
         requireRole(client, Role.CLIENT);
+        requireCriticalAccess(client);
         ServiceRequest request = requests.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Service request not found"));
         requireClientOwner(request, client);
@@ -224,6 +232,7 @@ public class ServiceRequestService {
 
     @Transactional
     public ServiceRequestResponse updateStatus(UUID id, RequestStatus nextStatus, User user) {
+        requireCriticalAccess(user);
         ServiceRequest request = find(id);
         if (nextStatus == RequestStatus.CANCELLED && user.getRole() == Role.CLIENT) {
             requireClientOwner(request, user);
@@ -374,6 +383,11 @@ public class ServiceRequestService {
 
     private void requireRole(User user, Role role) {
         if (user.getRole() != role) throw new ForbiddenException("Role " + role + " is required");
+    }
+
+    private void requireCriticalAccess(User user) {
+        userAccess.requireActive(user);
+        legal.requireAccepted(user);
     }
 
     private void requireClientOwner(ServiceRequest request, User user) {

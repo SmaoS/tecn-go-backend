@@ -1,0 +1,2 @@
+package com.tecngo.reports.entity;
+public enum ReportReason { PAYMENT_ISSUE, INAPPROPRIATE_BEHAVIOR, OVERCHARGE, NO_SHOW, BAD_SERVICE, FRAUD, SECURITY_RISK, OTHER }

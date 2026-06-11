@@ -100,11 +100,35 @@ public class User implements UserDetails {
     @Column(length = 120)
     private String homeNeighborhood;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AccountStatus accountStatus;
+
+    @Enumerated(EnumType.STRING)
+    private InactivationReason inactiveReason;
+
+    @Column(length = 1000)
+    private String inactiveComment;
+    private Instant inactivatedAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "inactivated_by_user_id")
+    private User inactivatedBy;
+
+    @Column(length = 500)
+    private String profilePhotoPublicId;
+    @Column(nullable = false)
+    private boolean profilePhotoFaceValidated;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_photo_verified_by_user_id")
+    private User profilePhotoVerifiedBy;
+    private Instant profilePhotoVerifiedAt;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = Instant.now();
         if (averageRating == null) averageRating = new BigDecimal("5.00");
         if (verificationStatus == null) verificationStatus = VerificationStatus.CREATED;
+        if (accountStatus == null) accountStatus = AccountStatus.ACTIVE;
         if (role == Role.ADMIN || role == Role.VERIFIER) emailVerified = true;
     }
 
