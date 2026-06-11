@@ -20,6 +20,11 @@ app:
     allowed-origins: ${FRONTEND_URL},${ALLOWED_ORIGINS:http://localhost:5173,http://localhost:8081},https://*.vercel.app
   email:
     require-verification: ${REQUIRE_EMAIL_VERIFICATION:true}
+  firebase:
+    enabled: ${FIREBASE_ENABLED:false}
+    project-id: ${FIREBASE_PROJECT_ID:}
+    private-key: ${FIREBASE_PRIVATE_KEY:}
+    client-email: ${FIREBASE_CLIENT_EMAIL:}
 
 logging:
   pattern:
