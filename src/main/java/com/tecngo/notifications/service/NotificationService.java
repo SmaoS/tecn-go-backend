@@ -23,11 +23,16 @@ import java.util.UUID;
 public class NotificationService {
     private final NotificationRepository notifications;
     private final UserRepository users;
-    private final PushNotificationGateway pushGateway;
+    private final UserPushNotificationService pushNotifications;
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> mine(User user) {
         return notifications.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().map(this::map).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public long unreadCount(User user) {
+        return notifications.countByUserIdAndReadFalse(user.getId());
     }
 
     @Transactional
@@ -52,9 +57,7 @@ public class NotificationService {
                 .message(event.message())
                 .type(event.type())
                 .build());
-        if (user.getFcmToken() != null && !user.getFcmToken().isBlank()) {
-            pushGateway.send(user.getFcmToken(), event.title(), event.message());
-        }
+        pushNotifications.sendPush(user.getId(), event.title(), event.message(), event.data());
     }
 
     private NotificationResponse map(Notification item) {

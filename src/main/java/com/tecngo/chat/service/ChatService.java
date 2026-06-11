@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -51,7 +52,11 @@ public class ChatService {
         User recipient = request.getClient().getId().equals(sender.getId())
                 ? request.getTechnician() : request.getClient();
         events.publishEvent(new UserNotificationEvent(recipient.getId(), "Nuevo mensaje",
-                sender.getFullName() + ": " + text.trim(), NotificationType.CHAT_MESSAGE));
+                sender.getFullName() + ": " + text.trim(), NotificationType.NEW_CHAT_MESSAGE,
+                Map.of(
+                        "type", "CHAT",
+                        "requestId", request.getId().toString(),
+                        "route", "Chat")));
         return map(message);
     }
 

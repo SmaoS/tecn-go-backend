@@ -14,14 +14,18 @@ import com.tecngo.shared.exception.NotFoundException;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.repository.UserRepository;
+import com.tecngo.notifications.entity.NotificationType;
+import com.tecngo.notifications.event.UserNotificationEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +33,7 @@ public class RatingService {
     private final RatingRepository ratings;
     private final ServiceRequestRepository requests;
     private final UserRepository users;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public RatingResponse create(UUID requestId, CreateRatingRequest input, User rater) {
@@ -58,6 +63,15 @@ public class RatingService {
                 .comment(input.comment() == null ? null : input.comment().trim())
                 .build());
         recalculate(ratedUser);
+        events.publishEvent(new UserNotificationEvent(
+                ratedUser.getId(),
+                "Nueva calificación",
+                rater.getFullName() + " calificó el servicio con " + input.score() + " estrellas",
+                NotificationType.NEW_RATING,
+                Map.of(
+                        "type", "RATING",
+                        "requestId", request.getId().toString(),
+                        "route", "Rating")));
         return map(saved);
     }
 

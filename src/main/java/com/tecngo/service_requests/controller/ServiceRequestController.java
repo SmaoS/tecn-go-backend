@@ -31,6 +31,18 @@ public class ServiceRequestController {
         return service.mine(user);
     }
 
+    @GetMapping("/my")
+    @PreAuthorize("hasRole('CLIENT')")
+    public List<ServiceRequestResponse> my(@AuthenticationPrincipal User user) {
+        return service.mine(user);
+    }
+
+    @GetMapping("/my-assigned")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    public List<ServiceRequestResponse> myAssigned(@AuthenticationPrincipal User user) {
+        return service.mine(user);
+    }
+
     @GetMapping("/available")
     @PreAuthorize("hasRole('TECHNICIAN')")
     public List<ServiceRequestResponse> available(
@@ -41,17 +53,25 @@ public class ServiceRequestController {
 
     @PutMapping("/{id}/quote")
     @PreAuthorize("hasRole('TECHNICIAN')")
-    public ServiceRequestResponse quote(@PathVariable java.util.UUID id,
-                                        @Valid @RequestBody QuoteRequest request,
-                                        @AuthenticationPrincipal User user) {
-        return service.quote(id, request.technicianPrice(), user);
+    public ServiceQuoteResponse quote(@PathVariable java.util.UUID id,
+                                      @Valid @RequestBody QuoteRequest request,
+                                      @AuthenticationPrincipal User user) {
+        return service.quote(id, request.technicianPrice(), request.description(), user);
+    }
+
+    @GetMapping("/{id}/quotes")
+    @PreAuthorize("hasRole('CLIENT')")
+    public List<ServiceQuoteResponse> quotes(@PathVariable java.util.UUID id,
+                                             @AuthenticationPrincipal User user) {
+        return service.quotes(id, user);
     }
 
     @PutMapping("/{id}/confirm-quote")
     @PreAuthorize("hasRole('CLIENT')")
     public ServiceRequestResponse confirmQuote(@PathVariable java.util.UUID id,
+                                               @Valid @RequestBody ConfirmQuoteRequest request,
                                                @AuthenticationPrincipal User user) {
-        return service.confirmQuote(id, user);
+        return service.confirmQuote(id, request.quoteId(), user);
     }
 
     @PutMapping("/{id}/status")

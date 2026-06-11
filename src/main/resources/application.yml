@@ -50,6 +50,13 @@ app:
     verification-url: ${EMAIL_VERIFICATION_URL:${FRONTEND_URL}/verificar-correo}
     verification-expiration-minutes: ${EMAIL_VERIFICATION_EXPIRATION_MINUTES:30}
     require-verification: ${REQUIRE_EMAIL_VERIFICATION:false}
+  firebase:
+    enabled: ${FIREBASE_ENABLED:false}
+    project-id: ${FIREBASE_PROJECT_ID:}
+    private-key: ${FIREBASE_PRIVATE_KEY:}
+    client-email: ${FIREBASE_CLIENT_EMAIL:}
+  notifications:
+    new-request-radius-km: ${NEW_REQUEST_NOTIFICATION_RADIUS_KM:25}
 
 info:
   app:

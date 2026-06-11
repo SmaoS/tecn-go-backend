@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -18,6 +20,7 @@ public class UserService {
     @Transactional
     public void updateFcmToken(User user, String token) {
         user.setFcmToken(token.trim());
+        user.setFcmTokenUpdatedAt(Instant.now());
         users.save(user);
     }
 

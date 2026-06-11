@@ -65,6 +65,8 @@ public class User implements UserDetails {
     @Column(length = 500)
     private String fcmToken;
 
+    private Instant fcmTokenUpdatedAt;
+
     @Column(length = 500)
     private String profilePhotoUrl;
 

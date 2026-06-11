@@ -41,6 +41,8 @@ class Phase5FlowIntegrationTest {
                 .andExpect(status().isNoContent());
         assertThat(users.findByEmailIgnoreCase(clientEmail).orElseThrow().getFcmToken())
                 .isEqualTo("fcm-token-" + suffix);
+        assertThat(users.findByEmailIgnoreCase(clientEmail).orElseThrow().getFcmTokenUpdatedAt())
+                .isNotNull();
 
         mvc.perform(put("/v1/users/me/profile")
                         .header("Authorization", bearer(client))
@@ -92,22 +94,38 @@ class Phase5FlowIntegrationTest {
                 .andReturn().getResponse().getContentAsString());
         String requestId = request.get("id").asText();
 
-        mvc.perform(put("/v1/service-requests/{id}/quote", requestId)
+        JsonNode quote = json(mvc.perform(put("/v1/service-requests/{id}/quote", requestId)
                         .header("Authorization", bearer(technician))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(Map.of("technicianPrice", 150000))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("QUOTED"));
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andReturn().getResponse().getContentAsString());
 
         JsonNode clientNotifications = json(mvc.perform(get("/v1/notifications")
+                .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("NEW_QUOTE"))
+                .andReturn().getResponse().getContentAsString());
+        mvc.perform(get("/v1/notifications/unread-count")
                         .header("Authorization", bearer(client)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].type").value("QUOTE_RECEIVED"))
-                .andReturn().getResponse().getContentAsString());
+                .andExpect(jsonPath("$.count").value(1));
         mvc.perform(put("/v1/notifications/{id}/read", clientNotifications.get(0).get("id").asText())
                         .header("Authorization", bearer(client)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.read").value(true));
+        mvc.perform(get("/v1/notifications/unread-count")
+                        .header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(0));
+
+        mvc.perform(put("/v1/service-requests/{id}/confirm-quote", requestId)
+                        .header("Authorization", bearer(client))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("quoteId", quote.get("id").asText()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("QUOTE_ACCEPTED"));
 
         mvc.perform(post("/v1/service-requests/{id}/chat/messages", requestId)
                         .header("Authorization", bearer(technician))
@@ -127,11 +145,6 @@ class Phase5FlowIntegrationTest {
                         .header("Authorization", bearer(client)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].readAt").isNotEmpty());
-
-        mvc.perform(put("/v1/service-requests/{id}/confirm-quote", requestId)
-                        .header("Authorization", bearer(client)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("QUOTE_ACCEPTED"));
 
         mvc.perform(post("/v1/service-requests/{id}/payment/cash", requestId)
                         .header("Authorization", bearer(client)))

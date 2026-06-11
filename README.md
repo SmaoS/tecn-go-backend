@@ -100,12 +100,14 @@ correo. Sin `RESEND_API_KEY`, desarrollo escribe el enlace en los logs.
 | GET | `/api/v1/service-requests/available` | TECHNICIAN aprobado |
 | GET | `/api/v1/service-requests/available?radiusKm=10` | TECHNICIAN aprobado |
 | PUT | `/api/v1/service-requests/{id}/quote` | TECHNICIAN aprobado |
+| GET | `/api/v1/service-requests/{id}/quotes` | CLIENT propietario |
 | PUT | `/api/v1/service-requests/{id}/confirm-quote` | CLIENT propietario |
 | PUT | `/api/v1/service-requests/{id}/status` | CLIENT o técnico asignado |
 | GET | `/api/v1/service-requests/{id}/chat` | Participantes |
 | POST | `/api/v1/service-requests/{id}/chat/messages` | Participantes |
 | PUT | `/api/v1/service-requests/{id}/chat/read` | Participantes |
 | GET | `/api/v1/notifications` | JWT |
+| GET | `/api/v1/notifications/unread-count` | JWT |
 | PUT | `/api/v1/notifications/{id}/read` | Propietario |
 | PUT | `/api/v1/users/me/fcm-token` | JWT |
 | POST | `/api/v1/files/upload` | JWT, JPG/PNG/PDF |
@@ -142,7 +144,7 @@ La aprobación profesional del técnico es independiente: primero debe tener ide
 Flujo de solicitudes:
 
 ```text
-QUOTE_PENDING -> QUOTED -> QUOTE_ACCEPTED -> ON_THE_WAY -> ARRIVED
+QUOTE_PENDING -> QUOTE_ACCEPTED -> ON_THE_WAY -> ARRIVED
               -> IN_PROGRESS -> COMPLETED -> PAID
 ```
 
@@ -154,10 +156,24 @@ Las solicitudes nuevas requieren dirección, latitud y longitud. El endpoint de
 disponibles usa Haversine, filtra por categorías del técnico y acepta radios de 1 a
 100 km.
 
-El técnico cotiza con `technicianPrice`; la solicitud pasa a `QUOTED` y queda
-reservada. El cliente confirma la cotización, se fija `finalPrice` y pasa a
-`QUOTE_ACCEPTED`.
-Los bloqueos pesimistas evitan cotizaciones simultáneas.
+Cada técnico aprobado puede registrar una cotización por solicitud con
+`technicianPrice` y una `description` opcional. La cotización puede actualizarse
+mientras siga pendiente y la solicitud permanece en `QUOTE_PENDING`, visible para
+otros técnicos cercanos.
+
+El cliente consulta todas las ofertas con
+`GET /api/v1/service-requests/{id}/quotes` y selecciona una enviando:
+
+```json
+{
+  "quoteId": "uuid-de-la-cotizacion"
+}
+```
+
+a `PUT /api/v1/service-requests/{id}/confirm-quote`. La oferta seleccionada pasa a
+`ACCEPTED`, las demás a `REJECTED`, se asigna el técnico y la solicitud pasa a
+`QUOTE_ACCEPTED`. El bloqueo pesimista de la solicitud impide que se acepten dos
+cotizaciones concurrentemente.
 
 ## Pagos y calificaciones
 
@@ -183,15 +199,23 @@ visibles para su dueño, un administrador o un verificador.
 Clientes y técnicos comienzan con reputación 5.00. El promedio se actualiza al recibir
 calificaciones y los contadores se incrementan al completar y pagar servicios.
 
-## Chat y notificaciones
+## Polling, chat y notificaciones
 
 El chat REST está disponible entre el cliente y el técnico asociado. Los mensajes
-guardan fecha de creación y lectura. Los eventos de cotización, confirmación, cambio de
-estado y mensaje crean notificaciones internas.
+guardan fecha de creación y lectura. Los clientes consultan sus solicitudes en
+`/service-requests/my`, los técnicos sus asignadas en `/service-requests/my-assigned`
+y las disponibles en `/service-requests/available`.
 
-`PushNotificationGateway` desacopla el envío push. En desarrollo se usa una
-implementación de logging; para producción debe reemplazarse por Firebase Admin SDK
-usando credenciales gestionadas fuera del repositorio.
+Los eventos `NEW_REQUEST`, `NEW_QUOTE`, `QUOTE_ACCEPTED`,
+`TECHNICIAN_ON_THE_WAY`, `TECHNICIAN_ARRIVED`, `SERVICE_STARTED`,
+`SERVICE_COMPLETED`, `NEW_CHAT_MESSAGE` y `NEW_RATING` crean una notificación
+persistida y, si existe token, un push FCM.
+
+`UserPushNotificationService` y `PushNotificationGateway` desacoplan la lógica de
+negocio del transporte. Con `FIREBASE_ENABLED=false` se usa logging; con
+`FIREBASE_ENABLED=true`, Firebase Admin SDK envía al token nativo registrado. La clave
+privada se configura en `FIREBASE_PRIVATE_KEY` usando `\n` para representar saltos de
+línea.
 
 ## Pruebas y build
 

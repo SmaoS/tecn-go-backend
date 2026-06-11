@@ -4,6 +4,9 @@ import com.tecngo.service_requests.dto.*;
 import com.tecngo.service_requests.entity.RequestStatus;
 import com.tecngo.service_requests.entity.ServiceRequest;
 import com.tecngo.service_requests.repository.ServiceRequestRepository;
+import com.tecngo.service_requests.repository.ServiceQuoteRepository;
+import com.tecngo.service_requests.entity.QuoteStatus;
+import com.tecngo.service_requests.entity.ServiceQuote;
 import com.tecngo.services.service.ServiceCategoryService;
 import com.tecngo.geolocation.HaversineDistance;
 import com.tecngo.notifications.entity.NotificationType;
@@ -12,6 +15,8 @@ import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.shared.exception.ForbiddenException;
 import com.tecngo.shared.exception.NotFoundException;
 import com.tecngo.technicians.service.TechnicianProfileService;
+import com.tecngo.technicians.entity.TechnicianStatus;
+import com.tecngo.technicians.repository.TechnicianProfileRepository;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import com.tecngo.verification.service.EmailVerificationService;
@@ -19,7 +24,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
+import java.util.Map;
 import java.util.List;
 import java.util.UUID;
 import java.math.BigDecimal;
@@ -29,11 +36,15 @@ import java.util.Comparator;
 @RequiredArgsConstructor
 public class ServiceRequestService {
     private final ServiceRequestRepository requests;
+    private final ServiceQuoteRepository quotes;
     private final ServiceCategoryService categories;
     private final TechnicianProfileService technicianProfiles;
+    private final TechnicianProfileRepository technicianProfileRepository;
     private final HaversineDistance distance;
     private final ApplicationEventPublisher events;
     private final EmailVerificationService emailVerification;
+    @Value("${app.notifications.new-request-radius-km:25}")
+    private double newRequestRadiusKm;
 
     @Transactional
     public ServiceRequestResponse create(CreateServiceRequest request, User client) {
@@ -43,7 +54,7 @@ public class ServiceRequestService {
             throw new ConflictException("Complete your profile with a document before requesting a service");
         }
         var category = categories.requireActive(request.categoryId());
-        return map(requests.save(ServiceRequest.builder()
+        ServiceRequest saved = requests.save(ServiceRequest.builder()
                 .client(client)
                 .category(category)
                 .description(request.description())
@@ -51,7 +62,9 @@ public class ServiceRequestService {
                 .latitude(request.latitude())
                 .longitude(request.longitude())
                 .estimatedPrice(request.estimatedPrice())
-                .build()));
+                .build());
+        notifyNearbyTechnicians(saved);
+        return map(saved);
     }
 
     @Transactional(readOnly = true)
@@ -86,43 +99,72 @@ public class ServiceRequestService {
     }
 
     @Transactional
-    public ServiceRequestResponse quote(UUID id, BigDecimal technicianPrice, User technician) {
+    public ServiceQuoteResponse quote(UUID id, BigDecimal technicianPrice, String description, User technician) {
         requireRole(technician, Role.TECHNICIAN);
         emailVerification.requireVerified(technician);
         var profile = technicianProfiles.approvedProfile(technician);
         ServiceRequest request = requests.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Service request not found"));
-        if (request.getStatus() != RequestStatus.QUOTE_PENDING || request.getTechnician() != null) {
+        if (request.getStatus() != RequestStatus.QUOTE_PENDING) {
             throw new ConflictException("Service request is no longer available");
         }
         boolean supportsCategory = profile.getCategories().stream()
                 .anyMatch(category -> category.getId().equals(request.getCategory().getId()));
         if (!supportsCategory) throw new ForbiddenException("Technician does not support this category");
-        request.setTechnician(technician);
-        request.setTechnicianPrice(technicianPrice);
-        request.setStatus(RequestStatus.QUOTED);
+        ServiceQuote quote = quotes.findByServiceRequestIdAndTechnicianId(id, technician.getId())
+                .orElseGet(() -> ServiceQuote.builder()
+                        .serviceRequest(request)
+                        .technician(technician)
+                        .status(QuoteStatus.PENDING)
+                        .build());
+        if (quote.getStatus() != QuoteStatus.PENDING) {
+            throw new ConflictException("This quote can no longer be changed");
+        }
+        quote.setPrice(technicianPrice);
+        quote.setDescription(clean(description));
+        quote = quotes.save(quote);
         events.publishEvent(new UserNotificationEvent(request.getClient().getId(), "Nueva cotización",
                 technician.getFullName() + " cotizó tu solicitud por $" + technicianPrice,
-                NotificationType.QUOTE_RECEIVED));
-        return map(request);
+                NotificationType.NEW_QUOTE, requestData(request)));
+        return mapQuote(quote);
     }
 
     @Transactional
-    public ServiceRequestResponse confirmQuote(UUID id, User client) {
+    public ServiceRequestResponse confirmQuote(UUID id, UUID quoteId, User client) {
         requireRole(client, Role.CLIENT);
         ServiceRequest request = requests.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Service request not found"));
         requireClientOwner(request, client);
-        if (request.getStatus() != RequestStatus.QUOTED || request.getTechnician() == null
-                || request.getTechnicianPrice() == null) {
-            throw new ConflictException("Service request does not have a pending quote");
+        if (request.getStatus() != RequestStatus.QUOTE_PENDING || request.getTechnician() != null) {
+            throw new ConflictException("Service request no longer accepts quotes");
         }
-        request.setFinalPrice(request.getTechnicianPrice());
+        ServiceQuote selected = quotes.findById(quoteId)
+                .orElseThrow(() -> new NotFoundException("Quote not found"));
+        if (!selected.getServiceRequest().getId().equals(id) || selected.getStatus() != QuoteStatus.PENDING) {
+            throw new ConflictException("Quote is not available for this service request");
+        }
+        selected.setStatus(QuoteStatus.ACCEPTED);
+        quotes.findByServiceRequestIdAndStatus(id, QuoteStatus.PENDING).stream()
+                .filter(item -> !item.getId().equals(selected.getId()))
+                .forEach(item -> item.setStatus(QuoteStatus.REJECTED));
+        request.setTechnician(selected.getTechnician());
+        request.setTechnicianPrice(selected.getPrice());
+        request.setFinalPrice(selected.getPrice());
         request.setStatus(RequestStatus.QUOTE_ACCEPTED);
-        events.publishEvent(new UserNotificationEvent(request.getTechnician().getId(), "Cotización aceptada",
+        events.publishEvent(new UserNotificationEvent(selected.getTechnician().getId(), "Cotización aceptada",
                 request.getClient().getFullName() + " aceptó tu cotización",
-                NotificationType.QUOTE_ACCEPTED));
+                NotificationType.QUOTE_ACCEPTED, requestData(request)));
         return map(request);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ServiceQuoteResponse> quotes(UUID id, User client) {
+        ServiceRequest request = find(id);
+        requireRole(client, Role.CLIENT);
+        requireClientOwner(request, client);
+        return quotes.findByServiceRequestIdOrderByCreatedAtAsc(id).stream()
+                .map(this::mapQuote)
+                .toList();
     }
 
     @Transactional
@@ -156,8 +198,53 @@ public class ServiceRequestService {
             request.getTechnician().setCompletedServicesCount(request.getTechnician().getCompletedServicesCount() + 1);
         }
         events.publishEvent(new UserNotificationEvent(request.getClient().getId(), "Estado actualizado",
-                "Tu servicio cambió a " + nextStatus, NotificationType.SERVICE_STATUS_CHANGED));
+                statusMessage(nextStatus), notificationType(nextStatus), requestData(request)));
         return map(request);
+    }
+
+    private void notifyNearbyTechnicians(ServiceRequest request) {
+        technicianProfileRepository.findByStatusOrderByCreatedAtAsc(TechnicianStatus.APPROVED).stream()
+                .filter(profile -> profile.getLatitude() != null && profile.getLongitude() != null)
+                .filter(profile -> profile.getCategories().stream()
+                        .anyMatch(category -> category.getId().equals(request.getCategory().getId())))
+                .filter(profile -> distance.kilometers(profile.getLatitude(), profile.getLongitude(),
+                        request.getLatitude(), request.getLongitude()) <= newRequestRadiusKm)
+                .forEach(profile -> events.publishEvent(new UserNotificationEvent(
+                        profile.getUser().getId(),
+                        "Nueva solicitud cercana",
+                        request.getCategory().getName() + " a menos de " + Math.round(newRequestRadiusKm) + " km",
+                        NotificationType.NEW_REQUEST,
+                        Map.of(
+                                "type", "SERVICE_REQUEST",
+                                "requestId", request.getId().toString(),
+                                "route", "AvailableRequests"))));
+    }
+
+    private NotificationType notificationType(RequestStatus status) {
+        return switch (status) {
+            case ON_THE_WAY -> NotificationType.TECHNICIAN_ON_THE_WAY;
+            case ARRIVED -> NotificationType.TECHNICIAN_ARRIVED;
+            case IN_PROGRESS -> NotificationType.SERVICE_STARTED;
+            case COMPLETED -> NotificationType.SERVICE_COMPLETED;
+            default -> NotificationType.SERVICE_STATUS_CHANGED;
+        };
+    }
+
+    private String statusMessage(RequestStatus status) {
+        return switch (status) {
+            case ON_THE_WAY -> "El técnico va en camino";
+            case ARRIVED -> "El técnico llegó al lugar del servicio";
+            case IN_PROGRESS -> "El servicio ha comenzado";
+            case COMPLETED -> "El técnico marcó el servicio como completado";
+            default -> "Tu servicio cambió a " + status;
+        };
+    }
+
+    private Map<String, String> requestData(ServiceRequest request) {
+        return Map.of(
+                "type", "SERVICE_REQUEST",
+                "requestId", request.getId().toString(),
+                "route", "RequestDetail");
     }
 
     private ServiceRequestResponse map(ServiceRequest item) {
@@ -184,6 +271,30 @@ public class ServiceRequestService {
                 approximateLocation ? null : item.getLatitude(), approximateLocation ? null : item.getLongitude(),
                 distanceKm, item.getEstimatedPrice(),
                 item.getTechnicianPrice(), item.getFinalPrice(), item.getStatus(), item.getCreatedAt());
+    }
+
+    private ServiceQuoteResponse mapQuote(ServiceQuote quote) {
+        User technician = quote.getTechnician();
+        return new ServiceQuoteResponse(
+                quote.getId(),
+                quote.getServiceRequest().getId(),
+                technician.getId(),
+                technician.getFullName(),
+                technician.getProfilePhotoUrl(),
+                technician.getAverageRating(),
+                technician.getCompletedServicesCount(),
+                technician.getWorkExperienceDescription(),
+                technicianProfiles.categoryNames(technician),
+                quote.getPrice(),
+                quote.getDescription(),
+                quote.getStatus(),
+                quote.getCreatedAt(),
+                quote.getUpdatedAt()
+        );
+    }
+
+    private String clean(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private String approximate(String address) {

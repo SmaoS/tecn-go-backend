@@ -1,6 +1,7 @@
 package com.tecngo.notifications.controller;
 
 import com.tecngo.notifications.dto.NotificationResponse;
+import com.tecngo.notifications.dto.UnreadCountResponse;
 import com.tecngo.notifications.service.NotificationService;
 import com.tecngo.users.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,11 @@ public class NotificationController {
     @GetMapping
     public List<NotificationResponse> mine(@AuthenticationPrincipal User user) {
         return service.mine(user);
+    }
+
+    @GetMapping("/unread-count")
+    public UnreadCountResponse unreadCount(@AuthenticationPrincipal User user) {
+        return new UnreadCountResponse(service.unreadCount(user));
     }
 
     @PutMapping("/{id}/read")

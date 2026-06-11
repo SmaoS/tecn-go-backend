@@ -19,7 +19,6 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
             select distinct request from ServiceRequest request
             join request.category category
             where request.status = :status
-              and request.technician is null
               and request.latitude is not null
               and request.longitude is not null
               and category.id in :categoryIds

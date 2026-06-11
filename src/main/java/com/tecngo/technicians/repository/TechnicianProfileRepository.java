@@ -11,6 +11,7 @@ import java.util.UUID;
 public interface TechnicianProfileRepository extends JpaRepository<TechnicianProfile, UUID> {
     Optional<TechnicianProfile> findByUserId(UUID userId);
     List<TechnicianProfile> findByStatusOrderByCreatedAtAsc(TechnicianStatus status);
+    long countByStatus(TechnicianStatus status);
     boolean existsByUserId(UUID userId);
     boolean existsByDocumentNumber(String documentNumber);
 }
