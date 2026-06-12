@@ -19,8 +19,17 @@ public class LegalService {
 
     @Transactional(readOnly = true)
     public List<LegalDocumentResponse> active(User user) {
+        if (user == null) {
+            return publicActive();
+        }
         return applicable(user).stream().map(item -> map(item,
                 acceptances.existsByUserIdAndLegalDocumentId(user.getId(), item.getId()))).toList();
+    }
+    @Transactional(readOnly = true)
+    public List<LegalDocumentResponse> publicActive() {
+        return documents.findByActiveTrueOrderByCodeAsc().stream()
+                .map(item -> map(item, false))
+                .toList();
     }
     @Transactional
     public LegalDocumentResponse accept(UUID id, User user, HttpServletRequest request) {

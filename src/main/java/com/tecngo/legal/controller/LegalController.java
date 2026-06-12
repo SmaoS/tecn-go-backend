@@ -11,6 +11,7 @@ import java.util.*;
 public class LegalController {
     private final LegalService service;
     @GetMapping("/legal/documents/active") public List<LegalDocumentResponse> active(@AuthenticationPrincipal User user) { return service.active(user); }
+    @GetMapping("/legal/documents/public") public List<LegalDocumentResponse> publicActive() { return service.publicActive(); }
     @PostMapping("/legal/documents/{id}/accept") public LegalDocumentResponse accept(@PathVariable UUID id,
             @AuthenticationPrincipal User user, HttpServletRequest request) { return service.accept(id, user, request); }
     @GetMapping("/users/me/legal-status") public LegalStatusResponse status(@AuthenticationPrincipal User user) { return service.status(user); }
