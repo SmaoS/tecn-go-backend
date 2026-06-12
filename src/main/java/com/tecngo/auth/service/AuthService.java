@@ -20,6 +20,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import com.tecngo.notifications.event.UserNotificationEvent;
 import com.tecngo.notifications.entity.NotificationType;
 import java.util.Map;
+import com.tecngo.referrals.service.ReferralService;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +32,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final EmailVerificationService emailVerificationService;
     private final ApplicationEventPublisher events;
+    private final ReferralService referrals;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -45,6 +47,7 @@ public class AuthService {
                 .role(request.role())
                 .verificationStatus(VerificationStatus.CREATED)
                 .build());
+        referrals.register(user, request.referralCode());
         try {
             emailVerificationService.send(user);
         } catch (RuntimeException exception) {

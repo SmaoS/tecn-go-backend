@@ -8,6 +8,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import com.tecngo.referrals.entity.ReferralReward;
 
 @Entity
 @Table(name = "payments")
@@ -52,6 +53,16 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentMethod method;
+
+    @Column(nullable = false)
+    private boolean commissionWaived;
+
+    @Column(length = 255)
+    private String commissionWaivedReason;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "referral_reward_id")
+    private ReferralReward referralReward;
 
     @Column(nullable = false)
     private Instant createdAt;

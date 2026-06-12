@@ -43,6 +43,13 @@ public class ServiceRequestController {
         return service.mine(user);
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CLIENT', 'TECHNICIAN')")
+    public ServiceRequestResponse detail(@PathVariable java.util.UUID id,
+                                         @AuthenticationPrincipal User user) {
+        return service.detail(id, user);
+    }
+
     @GetMapping("/available")
     @PreAuthorize("hasRole('TECHNICIAN')")
     public List<ServiceRequestResponse> available(

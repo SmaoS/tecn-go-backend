@@ -26,6 +26,11 @@ public class SystemParameterService {
     public static final String MAX_PAYMENT_PROOF_FILES = "MAX_PAYMENT_PROOF_FILES";
     public static final String REQUIRE_LEGAL_ACCEPTANCE = "REQUIRE_LEGAL_ACCEPTANCE";
     public static final String REQUIRE_PROFILE_FACE_DETECTION = "REQUIRE_PROFILE_FACE_DETECTION";
+    public static final String REFERRAL_PROGRAM_ENABLED = "REFERRAL_PROGRAM_ENABLED";
+    public static final String REFERRAL_REQUIRED_RATING = "REFERRAL_REQUIRED_RATING";
+    public static final String REFERRAL_REWARD_EXPIRATION_DAYS = "REFERRAL_REWARD_EXPIRATION_DAYS";
+    public static final String REFERRAL_REWARD_ONLY_IF_COMMISSION_GT_ZERO = "REFERRAL_REWARD_ONLY_IF_COMMISSION_GT_ZERO";
+    public static final String APP_VERSION_CHECK_ENABLED = "APP_VERSION_CHECK_ENABLED";
 
     private final SystemParameterRepository repository;
 
@@ -87,6 +92,18 @@ public class SystemParameterService {
     public boolean requireProfileFaceDetection() {
         return repository.findByKeyAndActiveTrue(REQUIRE_PROFILE_FACE_DETECTION)
                 .map(item -> Boolean.parseBoolean(item.getValue())).orElse(requireFaceDetectionFallback);
+    }
+    public boolean referralProgramEnabled() { return bool(REFERRAL_PROGRAM_ENABLED, true); }
+    public int referralRequiredRating() { return integer(REFERRAL_REQUIRED_RATING, 5); }
+    public int referralRewardExpirationDays() { return integer(REFERRAL_REWARD_EXPIRATION_DAYS, 0); }
+    public boolean referralRewardOnlyIfCommissionGtZero() {
+        return bool(REFERRAL_REWARD_ONLY_IF_COMMISSION_GT_ZERO, true);
+    }
+    public boolean appVersionCheckEnabled() { return bool(APP_VERSION_CHECK_ENABLED, true); }
+
+    private boolean bool(String key, boolean fallback) {
+        return repository.findByKeyAndActiveTrue(key)
+                .map(item -> Boolean.parseBoolean(item.getValue())).orElse(fallback);
     }
 
     private int integer(String key, int fallback) {

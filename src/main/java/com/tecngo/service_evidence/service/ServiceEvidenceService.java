@@ -9,7 +9,10 @@ import com.tecngo.service_requests.repository.ServiceRequestRepository;
 import com.tecngo.shared.exception.*;
 import com.tecngo.system_parameters.service.SystemParameterService;
 import com.tecngo.users.entity.*;
+import com.tecngo.notifications.entity.NotificationType;
+import com.tecngo.notifications.event.UserNotificationEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +25,7 @@ public class ServiceEvidenceService {
     private final ServiceRequestRepository requests;
     private final FileStorage storage;
     private final SystemParameterService parameters;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public ServiceEvidenceResponse upload(UUID requestId, EvidenceType type, String description,
@@ -31,9 +35,19 @@ public class ServiceEvidenceService {
         if (evidences.countByServiceRequestId(requestId) >= parameters.maxServiceEvidenceFiles())
             throw new ConflictException("Maximum number of service evidences reached");
         var stored = storage.store(file, false, "tecngo/service-evidences", TYPES);
-        return map(evidences.save(ServiceEvidence.builder().serviceRequest(request).uploadedBy(user)
+        ServiceEvidence evidence = evidences.save(ServiceEvidence.builder().serviceRequest(request).uploadedBy(user)
                 .uploadedByRole(user.getRole()).evidenceType(type).fileUrl(stored.accessUrl())
-                .publicId(stored.publicId()).description(clean(description)).build()));
+                .publicId(stored.publicId()).description(clean(description)).build());
+        if (user.getRole() == Role.TECHNICIAN) {
+            events.publishEvent(new UserNotificationEvent(
+                    request.getClient().getId(),
+                    "Nueva evidencia del servicio",
+                    user.getFullName() + " subió una evidencia",
+                    NotificationType.SERVICE_EVIDENCE_UPLOADED,
+                    Map.of("type", "SERVICE_REQUEST", "requestId", request.getId().toString(),
+                            "route", "ServiceSupport")));
+        }
+        return map(evidence);
     }
     @Transactional(readOnly = true)
     public List<ServiceEvidenceResponse> list(UUID requestId, User user) {

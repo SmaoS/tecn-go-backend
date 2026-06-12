@@ -40,6 +40,8 @@ public class SecurityConfig {
                                 "/v1/services/**", "/v1/service-categories/**", "/swagger-ui/**",
                                 "/swagger-ui.html", "/v3/api-docs/**", "/actuator/health", "/actuator/info",
                                 "/version", "/error").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/v1/referrals/validate/**",
+                                "/v1/app-version/check").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/technicians/*/ratings",
                                 "/v1/technicians/*/summary").permitAll()
                         .anyRequest().authenticated())

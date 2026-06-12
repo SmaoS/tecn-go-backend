@@ -3,6 +3,7 @@ package com.tecngo.ratings.controller;
 import com.tecngo.ratings.dto.CreateRatingRequest;
 import com.tecngo.ratings.dto.RatingResponse;
 import com.tecngo.ratings.dto.TechnicianRatingSummary;
+import com.tecngo.ratings.dto.RatingStatusResponse;
 import com.tecngo.ratings.service.RatingService;
 import com.tecngo.users.entity.User;
 import jakarta.validation.Valid;
@@ -37,5 +38,11 @@ public class RatingController {
     @GetMapping("/v1/technicians/{id}/summary")
     public TechnicianRatingSummary summary(@PathVariable UUID id) {
         return service.technicianSummary(id);
+    }
+
+    @GetMapping("/v1/service-requests/{id}/ratings/me")
+    @PreAuthorize("hasAnyRole('CLIENT','TECHNICIAN')")
+    public RatingStatusResponse status(@PathVariable UUID id, @AuthenticationPrincipal User user) {
+        return service.status(id, user);
     }
 }

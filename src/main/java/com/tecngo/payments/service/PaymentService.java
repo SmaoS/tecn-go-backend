@@ -25,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import com.tecngo.referrals.entity.ReferralReward;
+import com.tecngo.referrals.service.ReferralService;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +38,7 @@ public class PaymentService {
     private final UserRepository users;
     private final UserAccessService userAccess;
     private final LegalService legal;
+    private final ReferralService referrals;
 
     @Transactional
     public PaymentResponse payCash(UUID requestId, User client) {
@@ -59,15 +62,21 @@ public class PaymentService {
 
         BigDecimal amount = request.getFinalPrice();
         BigDecimal percentage = parameters.platformCommissionPercentage();
-        BigDecimal platformFee = feeCalculator.fee(amount, percentage);
+        ReferralReward reward = referrals.useAvailableReward(request.getTechnician(), request, percentage);
+        boolean commissionWaived = reward != null;
+        BigDecimal effectivePercentage = commissionWaived ? BigDecimal.ZERO : percentage;
+        BigDecimal platformFee = feeCalculator.fee(amount, effectivePercentage);
         Payment payment = payments.save(Payment.builder()
                 .serviceRequest(request)
                 .client(client)
                 .technician(request.getTechnician())
                 .amount(amount)
                 .platformFee(platformFee)
-                .platformCommissionPercentage(percentage)
-                .technicianAmount(feeCalculator.technicianAmount(amount, percentage))
+                .platformCommissionPercentage(effectivePercentage)
+                .technicianAmount(feeCalculator.technicianAmount(amount, effectivePercentage))
+                .commissionWaived(commissionWaived)
+                .commissionWaivedReason(commissionWaived ? "REFERRAL_REWARD" : null)
+                .referralReward(reward)
                 .status(PaymentStatus.PAID)
                 .method(PaymentMethod.CASH)
                 .build());
@@ -112,7 +121,10 @@ public class PaymentService {
                 payment.getTechnician().getId(), payment.getTechnician().getFullName(),
                 payment.getAmount(), payment.getPlatformFee(), payment.getTechnicianAmount(),
                 payment.getPlatformCommissionPercentage(),
-                payment.getStatus(), payment.getMethod(), payment.getCreatedAt());
+                payment.getStatus(), payment.getMethod(), payment.isCommissionWaived(),
+                payment.getCommissionWaivedReason(),
+                payment.getReferralReward() == null ? null : payment.getReferralReward().getId(),
+                payment.getCreatedAt());
     }
 
     private void requireRole(User user, Role role) {

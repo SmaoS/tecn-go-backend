@@ -12,5 +12,6 @@ public record PaymentResponse(
         UUID technicianId, String technicianName, BigDecimal amount, BigDecimal platformFee,
         BigDecimal technicianAmount, BigDecimal platformCommissionPercentage,
         PaymentStatus paymentStatus, PaymentMethod paymentMethod,
+        boolean commissionWaived, String commissionWaivedReason, UUID referralRewardId,
         Instant createdAt
 ) {}

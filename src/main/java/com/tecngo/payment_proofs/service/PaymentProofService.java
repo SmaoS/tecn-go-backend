@@ -11,7 +11,10 @@ import com.tecngo.service_requests.repository.ServiceRequestRepository;
 import com.tecngo.shared.exception.*;
 import com.tecngo.system_parameters.service.SystemParameterService;
 import com.tecngo.users.entity.*;
+import com.tecngo.notifications.entity.NotificationType;
+import com.tecngo.notifications.event.UserNotificationEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +30,7 @@ public class PaymentProofService {
     private final PaymentRepository payments;
     private final FileStorage storage;
     private final SystemParameterService parameters;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public PaymentProofResponse upload(UUID requestId, BigDecimal amount, ProofPaymentMethod method,
@@ -37,9 +41,15 @@ public class PaymentProofService {
         if (proofs.countByServiceRequestId(requestId) >= parameters.maxPaymentProofFiles())
             throw new ConflictException("Maximum number of payment proofs reached");
         var stored = storage.store(file, false, "tecngo/payment-proofs", TYPES);
-        return map(proofs.save(PaymentProof.builder().serviceRequest(request).uploadedBy(user)
+        PaymentProof proof = proofs.save(PaymentProof.builder().serviceRequest(request).uploadedBy(user)
                 .fileUrl(stored.accessUrl()).publicId(stored.publicId()).amount(amount)
-                .paymentMethod(method).build()));
+                .paymentMethod(method).build());
+        if (user.getRole() == Role.CLIENT && request.getTechnician() != null) {
+            notifyUser(request.getTechnician(), request, "Nuevo comprobante de pago",
+                    user.getFullName() + " subió un comprobante de pago",
+                    NotificationType.PAYMENT_PROOF_UPLOADED);
+        }
+        return map(proof);
     }
     @Transactional(readOnly = true)
     public List<PaymentProofResponse> list(UUID requestId, User user) {
@@ -70,6 +80,12 @@ public class PaymentProofService {
         proof.setReviewComment(clean(comment));
         if (approve) payments.findByServiceRequestId(proof.getServiceRequest().getId())
                 .ifPresent(payment -> payment.setStatus(PaymentStatus.PAID));
+        ServiceRequest request = proof.getServiceRequest();
+        notifyUser(request.getClient(), request,
+                approve ? "Pago verificado" : "Comprobante rechazado",
+                approve ? "El comprobante de pago fue aprobado"
+                        : "El comprobante de pago fue rechazado: " + clean(comment),
+                NotificationType.PAYMENT_PROOF_VERIFIED);
         return map(proof);
     }
     private ServiceRequest requireRequest(UUID id) {
@@ -93,4 +109,10 @@ public class PaymentProofService {
                 item.getReviewComment(), item.getCreatedAt());
     }
     private String clean(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+    private void notifyUser(User recipient, ServiceRequest request, String title, String message,
+                            NotificationType type) {
+        events.publishEvent(new UserNotificationEvent(recipient.getId(), title, message, type,
+                Map.of("type", "SERVICE_REQUEST", "requestId", request.getId().toString(),
+                        "route", "ServiceSupport")));
+    }
 }

@@ -2,6 +2,7 @@ package com.tecngo.technician_location.controller;
 
 import com.tecngo.technician_location.dto.TechnicianLocationRequest;
 import com.tecngo.technician_location.dto.TechnicianLocationResponse;
+import com.tecngo.technician_location.dto.NearbyTechnicianResponse;
 import com.tecngo.technician_location.service.TechnicianLocationService;
 import com.tecngo.users.entity.User;
 import jakarta.validation.Valid;
@@ -43,5 +44,13 @@ public class TechnicianLocationController {
     public TechnicianLocationResponse forRequest(@PathVariable UUID id,
                                                  @AuthenticationPrincipal User user) {
         return service.forRequest(id, user);
+    }
+
+    @GetMapping("/technicians/nearby")
+    @PreAuthorize("hasRole('CLIENT')")
+    public List<NearbyTechnicianResponse> nearby(@RequestParam double latitude,
+                                                @RequestParam double longitude,
+                                                @RequestParam(defaultValue = "25") double radiusKm) {
+        return service.nearby(latitude, longitude, radiusKm);
     }
 }

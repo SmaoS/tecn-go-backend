@@ -217,6 +217,12 @@ Los eventos `NEW_REQUEST`, `NEW_QUOTE`, `QUOTE_ACCEPTED`,
 `SERVICE_COMPLETED`, `NEW_CHAT_MESSAGE` y `NEW_RATING` crean una notificación
 persistida y, si existe token, un push FCM.
 
+También se notifican `QUOTE_REJECTED`, `PAYMENT_PROOF_UPLOADED`,
+`SERVICE_EVIDENCE_UPLOADED` y `PAYMENT_PROOF_VERIFIED`. Cada push relacionado con
+un servicio incluye `requestId` y `route`; la aplicación vuelve a consultar la API
+al abrirlo, por lo que el push funciona como aviso y el polling conserva la fuente
+de verdad.
+
 `UserPushNotificationService` y `PushNotificationGateway` desacoplan la lógica de
 negocio del transporte. Con `FIREBASE_ENABLED=false` se usa logging; con
 `FIREBASE_ENABLED=true`, Firebase Admin SDK envía al token nativo registrado. La clave
@@ -245,14 +251,38 @@ Cliente y técnico sólo acceden a archivos de servicios donde participan. `ADMI
 usuarios. Una cuenta inactiva conserva login y consulta de perfil, pero no puede crear,
 cotizar, aceptar, avanzar ni pagar servicios.
 
-Los textos semilla tienen la marca `BORRADOR PARA REVISIÓN JURÍDICA`. La captura de
-perfil no hace reconocimiento biométrico ni comparación documental: queda
+La captura de perfil no hace reconocimiento biométrico ni comparación documental: queda
 `profilePhotoFaceValidated=false` hasta revisión manual mediante
 `PUT /v1/verifications/{userId}/profile-photo/verify`.
 
-La migración `V14` publica los documentos `2.0-draft`, crea la notificación legal
+La migración `V14` publica los documentos legales, crea la notificación legal
 inicial y persiste `route`/`requestId` para navegación contextual desde web, mobile y
 push FCM.
+
+## Referidos y versiones de app
+
+La migración `V16` crea códigos únicos para técnicos, registros de referidos,
+beneficios de servicio sin comisión y configuración de versiones Android/iOS.
+El registro acepta `referralCode` opcional. Un referido genera un único beneficio
+cuando participa en un servicio pagado con calificación de 5 estrellas.
+
+Si `PLATFORM_COMMISSION_PERCENTAGE=0`, los beneficios permanecen disponibles. Cuando
+la comisión sea mayor que cero, el pago consume el beneficio más antiguo y registra
+`commissionWaived`, `commissionWaivedReason` y `referralRewardId`.
+
+Endpoints principales:
+
+```text
+GET /v1/referrals/validate/{code}
+GET /v1/technicians/me/referral-code
+GET /v1/technicians/me/referrals
+GET /v1/technicians/me/referral-rewards
+GET /v1/admin/referrals
+GET /v1/app-version/check?platform=ANDROID&currentVersion=1.0.0
+GET/PUT /v1/admin/app-versions
+```
+
+Las versiones usan formato `x.y.z`; la comparación es numérica por segmento.
 
 ## Pruebas y build
 

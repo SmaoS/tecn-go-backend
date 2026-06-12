@@ -71,6 +71,11 @@ app:
     max-payment-proof-files: ${MAX_PAYMENT_PROOF_FILES:3}
     require-legal-acceptance: ${REQUIRE_LEGAL_ACCEPTANCE:true}
     require-profile-face-detection: ${REQUIRE_PROFILE_FACE_DETECTION:false}
+    referral-program-enabled: ${REFERRAL_PROGRAM_ENABLED:true}
+    referral-required-rating: ${REFERRAL_REQUIRED_RATING:5}
+    referral-reward-expiration-days: ${REFERRAL_REWARD_EXPIRATION_DAYS:0}
+    referral-reward-only-if-commission-gt-zero: ${REFERRAL_REWARD_ONLY_IF_COMMISSION_GT_ZERO:true}
+    app-version-check-enabled: ${APP_VERSION_CHECK_ENABLED:true}
 
 info:
   app:

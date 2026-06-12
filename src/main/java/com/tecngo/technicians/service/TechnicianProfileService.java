@@ -14,6 +14,7 @@ import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.repository.UserRepository;
 import com.tecngo.users.service.UserService;
 import com.tecngo.verification.service.EmailVerificationService;
+import com.tecngo.referrals.service.ReferralService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ public class TechnicianProfileService {
     private final UserRepository users;
     private final UserService userService;
     private final EmailVerificationService emailVerification;
+    private final ReferralService referrals;
 
     @Transactional
     public TechnicianProfileResponse create(TechnicianProfileRequest request, User user) {
@@ -39,7 +41,7 @@ public class TechnicianProfileService {
             throw new ConflictException("Document number is already registered");
         }
         updateUserEvidence(user, request);
-        return map(profiles.save(TechnicianProfile.builder()
+        TechnicianProfile saved = profiles.save(TechnicianProfile.builder()
                 .user(user)
                 .documentNumber(request.documentNumber().trim())
                 .phone(request.phone().trim())
@@ -47,7 +49,9 @@ public class TechnicianProfileService {
                 .description(request.description().trim())
                 .latitude(request.latitude())
                 .longitude(request.longitude())
-                .build()));
+                .build());
+        referrals.ensureCode(user);
+        return map(saved);
     }
 
     @Transactional(readOnly = true)
@@ -88,6 +92,7 @@ public class TechnicianProfileService {
             throw new IllegalStateException("User identity must be verified first");
         }
         profile.setStatus(status);
+        if (status == TechnicianStatus.APPROVED) referrals.ensureCode(profile.getUser());
         return map(profile);
     }
 

@@ -10,5 +10,6 @@ public record RegisterRequest(
         @NotBlank String fullName,
         @Email @NotBlank String email,
         @Size(min = 8) String password,
-        @NotNull Role role
+        @NotNull Role role,
+        String referralCode
 ) {}

@@ -92,6 +92,16 @@ public class ServiceRequestService {
     }
 
     @Transactional(readOnly = true)
+    public ServiceRequestResponse detail(UUID id, User user) {
+        ServiceRequest request = find(id);
+        boolean participant = request.getClient().getId().equals(user.getId())
+                || request.getTechnician() != null
+                && request.getTechnician().getId().equals(user.getId());
+        if (!participant) throw new ForbiddenException("Only service participants can view this request");
+        return map(request);
+    }
+
+    @Transactional(readOnly = true)
     public List<ServiceRequestResponse> available(User technician, double radiusKm) {
         requireRole(technician, Role.TECHNICIAN);
         userAccess.requireActive(technician);
@@ -188,6 +198,7 @@ public class ServiceRequestService {
                 .forEach(item -> {
                     item.setStatus(QuoteStatus.REJECTED);
                     item.setRespondedAt(Instant.now());
+                    notifyQuoteRejected(request, item.getTechnician());
                 });
         request.setTechnician(selected.getTechnician());
         request.setTechnicianPrice(selected.getPrice());
@@ -227,6 +238,7 @@ public class ServiceRequestService {
         }
         quote.setStatus(QuoteStatus.REJECTED);
         quote.setRespondedAt(Instant.now());
+        notifyQuoteRejected(request, quote.getTechnician());
         return mapQuote(quote);
     }
 
@@ -407,7 +419,20 @@ public class ServiceRequestService {
         User recipient = request.getClient().getId().equals(actor.getId())
                 ? request.getTechnician() : request.getClient();
         if (recipient != null) {
-            events.publishEvent(new UserNotificationEvent(recipient.getId(), title, message, type));
+            events.publishEvent(new UserNotificationEvent(
+                    recipient.getId(), title, message, type, requestData(request)));
         }
+    }
+
+    private void notifyQuoteRejected(ServiceRequest request, User technician) {
+        events.publishEvent(new UserNotificationEvent(
+                technician.getId(),
+                "Cotización no seleccionada",
+                request.getClient().getFullName() + " eligió otra cotización o rechazó tu oferta",
+                NotificationType.QUOTE_REJECTED,
+                Map.of(
+                        "type", "SERVICE_REQUEST",
+                        "requestId", request.getId().toString(),
+                        "route", "AvailableRequests")));
     }
 }

@@ -3,6 +3,7 @@ package com.tecngo.ratings.service;
 import com.tecngo.ratings.dto.CreateRatingRequest;
 import com.tecngo.ratings.dto.RatingResponse;
 import com.tecngo.ratings.dto.TechnicianRatingSummary;
+import com.tecngo.ratings.dto.RatingStatusResponse;
 import com.tecngo.ratings.entity.Rating;
 import com.tecngo.ratings.repository.RatingRepository;
 import com.tecngo.service_requests.entity.RequestStatus;
@@ -26,6 +27,7 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 import java.util.Map;
+import com.tecngo.referrals.service.ReferralService;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +36,7 @@ public class RatingService {
     private final ServiceRequestRepository requests;
     private final UserRepository users;
     private final ApplicationEventPublisher events;
+    private final ReferralService referrals;
 
     @Transactional
     public RatingResponse create(UUID requestId, CreateRatingRequest input, User rater) {
@@ -63,6 +66,7 @@ public class RatingService {
                 .comment(input.comment() == null ? null : input.comment().trim())
                 .build());
         recalculate(ratedUser);
+        referrals.qualifyFromRating(request, saved);
         events.publishEvent(new UserNotificationEvent(
                 ratedUser.getId(),
                 "Nueva calificación",
@@ -79,6 +83,16 @@ public class RatingService {
     public List<RatingResponse> technicianRatings(UUID technicianId) {
         requireTechnician(technicianId);
         return ratings.findByRatedUserIdOrderByCreatedAtDesc(technicianId).stream().map(this::map).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public RatingStatusResponse status(UUID requestId, User user) {
+        ServiceRequest request = requests.findById(requestId)
+                .orElseThrow(() -> new NotFoundException("Service request not found"));
+        boolean participant = request.getClient().getId().equals(user.getId())
+                || request.getTechnician() != null && request.getTechnician().getId().equals(user.getId());
+        if (!participant) throw new ForbiddenException("Only service participants can view rating status");
+        return new RatingStatusResponse(ratings.existsByServiceRequestIdAndRaterId(requestId, user.getId()));
     }
 
     @Transactional(readOnly = true)
