@@ -8,6 +8,7 @@ import com.tecngo.services.entity.ServiceCategory;
 import com.tecngo.services.service.ServiceCategoryService;
 import com.tecngo.technicians.dto.TechnicianProfileRequest;
 import com.tecngo.technicians.dto.TechnicianProfileResponse;
+import com.tecngo.technicians.dto.TechnicianAvailabilityResponse;
 import com.tecngo.technicians.entity.TechnicianProfile;
 import com.tecngo.technicians.entity.TechnicianStatus;
 import com.tecngo.technicians.repository.TechnicianProfileRepository;
@@ -79,6 +80,18 @@ public class TechnicianProfileService {
         }
         if (profile.getStatus() == TechnicianStatus.REJECTED) profile.setStatus(TechnicianStatus.PENDING);
         return map(profile);
+    }
+
+    @Transactional(readOnly = true)
+    public TechnicianAvailabilityResponse availability(User user) {
+        return new TechnicianAvailabilityResponse(findByUser(user).isAvailable());
+    }
+
+    @Transactional
+    public TechnicianAvailabilityResponse updateAvailability(User user, boolean available) {
+        TechnicianProfile profile = findByUser(user);
+        profile.setAvailable(available);
+        return new TechnicianAvailabilityResponse(available);
     }
 
     @Transactional(readOnly = true)

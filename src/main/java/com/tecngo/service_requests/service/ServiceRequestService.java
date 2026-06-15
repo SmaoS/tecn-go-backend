@@ -154,6 +154,7 @@ public class ServiceRequestService {
             throw new IllegalArgumentException("radiusKm must be greater than 0 and at most 100");
         }
         var profile = technicianProfiles.approvedProfile(technician);
+        if (!profile.isAvailable()) return List.of();
         if (profile.getLatitude() == null || profile.getLongitude() == null) {
             throw new ConflictException("Technician location is required");
         }
@@ -324,6 +325,7 @@ public class ServiceRequestService {
 
     private void notifyNearbyTechnicians(ServiceRequest request) {
         technicianProfileRepository.findByStatusOrderByCreatedAtAsc(TechnicianStatus.APPROVED).stream()
+                .filter(com.tecngo.technicians.entity.TechnicianProfile::isAvailable)
                 .filter(profile -> profile.getLatitude() != null && profile.getLongitude() != null)
                 .filter(profile -> profile.getCategories().stream()
                         .anyMatch(category -> category.getId().equals(request.getCategory().getId())))

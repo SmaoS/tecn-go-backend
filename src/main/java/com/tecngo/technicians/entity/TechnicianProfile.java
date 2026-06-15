@@ -48,6 +48,10 @@ public class TechnicianProfile {
     private TechnicianStatus status;
 
     @Column(nullable = false)
+    @Builder.Default
+    private boolean available = true;
+
+    @Column(nullable = false)
     private Instant createdAt;
 
     @Column(nullable = false)

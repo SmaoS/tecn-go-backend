@@ -74,7 +74,8 @@ public class TechnicianLocationService {
                 .filter(TechnicianLocation::isOnline)
                 .filter(item -> !item.getUpdatedAt().isBefore(threshold))
                 .filter(item -> profileRepository.findByUserId(item.getTechnician().getId())
-                        .map(profile -> profile.getStatus() == TechnicianStatus.APPROVED)
+                        .map(profile -> profile.getStatus() == TechnicianStatus.APPROVED
+                                && profile.isAvailable())
                         .orElse(false))
                 .map(item -> new NearbyTechnicianResponse(
                         item.getTechnician().getId(),
