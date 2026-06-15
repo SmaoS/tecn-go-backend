@@ -36,6 +36,9 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        if (!request.password().equals(request.confirmPassword())) {
+            throw new IllegalArgumentException("Las contraseñas no coinciden");
+        }
         if (request.role() == Role.ADMIN || request.role() == Role.VERIFIER) {
             throw new IllegalArgumentException("This role cannot be registered publicly");
         }

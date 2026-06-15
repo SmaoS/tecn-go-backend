@@ -61,7 +61,7 @@ class VerificationFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"fullName":"Cliente verificación","email":"verify-%s@tecngo.local",
-                                "password":"TecnGo123!","role":"CLIENT"}
+                                "password":"TecnGo123!","confirmPassword":"TecnGo123!","role":"CLIENT"}
                                 """.formatted(suffix)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString());

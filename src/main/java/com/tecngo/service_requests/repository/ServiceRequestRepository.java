@@ -11,10 +11,13 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Set;
 
 public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, UUID> {
     List<ServiceRequest> findByClientIdOrderByCreatedAtDesc(UUID clientId);
     List<ServiceRequest> findByTechnicianIdOrderByCreatedAtDesc(UUID technicianId);
+    List<ServiceRequest> findByClientIdAndStatusInOrderByCreatedAtDesc(UUID clientId, Set<RequestStatus> statuses);
+    List<ServiceRequest> findByTechnicianIdAndStatusInOrderByCreatedAtDesc(UUID technicianId, Set<RequestStatus> statuses);
     @Query("""
             select distinct request from ServiceRequest request
             join request.category category

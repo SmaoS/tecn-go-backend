@@ -54,6 +54,9 @@ app:
     verification-url: ${EMAIL_VERIFICATION_URL:${FRONTEND_URL}/verificar-correo}
     verification-expiration-minutes: ${EMAIL_VERIFICATION_EXPIRATION_MINUTES:30}
     require-verification: ${REQUIRE_EMAIL_VERIFICATION:false}
+  password-reset:
+    expiration-minutes: ${PASSWORD_RESET_TOKEN_MINUTES:30}
+    url: ${PASSWORD_RESET_URL:${FRONTEND_URL:http://localhost:5173}/reset-password}
   firebase:
     enabled: ${FIREBASE_ENABLED:false}
     project-id: ${FIREBASE_PROJECT_ID:}

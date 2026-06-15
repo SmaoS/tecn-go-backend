@@ -1,6 +1,8 @@
 package com.tecngo.users.controller;
 
 import com.tecngo.users.dto.FcmTokenRequest;
+import com.tecngo.users.dto.ChangePasswordRequest;
+import com.tecngo.password_recovery.dto.PasswordMessageResponse;
 import com.tecngo.users.dto.UserProfileRequest;
 import com.tecngo.users.dto.UserProfileResponse;
 import com.tecngo.users.entity.User;
@@ -33,5 +35,11 @@ public class UserController {
     public UserProfileResponse updateProfile(@Valid @RequestBody UserProfileRequest request,
                                              @AuthenticationPrincipal User user) {
         return service.updateProfile(user, request);
+    }
+
+    @PostMapping("/me/change-password")
+    public PasswordMessageResponse changePassword(@Valid @RequestBody ChangePasswordRequest request,
+                                                  @AuthenticationPrincipal User user) {
+        return service.changePassword(user, request);
     }
 }

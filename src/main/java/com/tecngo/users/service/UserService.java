@@ -4,6 +4,12 @@ import com.tecngo.content_moderation.entity.ContentAssetKind;
 import com.tecngo.content_moderation.service.ManagedContentPolicy;
 import com.tecngo.users.dto.UserProfileRequest;
 import com.tecngo.users.dto.UserProfileResponse;
+import com.tecngo.users.dto.ChangePasswordRequest;
+import com.tecngo.password_recovery.dto.PasswordMessageResponse;
+import com.tecngo.password_recovery.entity.PasswordSecurityAudit;
+import com.tecngo.password_recovery.repository.PasswordResetTokenRepository;
+import com.tecngo.password_recovery.repository.PasswordSecurityAuditRepository;
+import com.tecngo.shared.exception.UnauthorizedException;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.entity.VerificationStatus;
@@ -11,6 +17,7 @@ import com.tecngo.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
 import java.util.Set;
@@ -20,6 +27,9 @@ import java.util.Set;
 public class UserService {
     private final UserRepository users;
     private final ManagedContentPolicy managedContent;
+    private final PasswordEncoder passwordEncoder;
+    private final PasswordResetTokenRepository passwordResetTokens;
+    private final PasswordSecurityAuditRepository passwordAudits;
 
     @Transactional
     public void updateFcmToken(User user, String token) {
@@ -69,6 +79,27 @@ public class UserService {
         }
         updateVerificationStatus(user, previousDocument, newDocument);
         return map(users.save(user));
+    }
+
+    @Transactional
+    public PasswordMessageResponse changePassword(User user, ChangePasswordRequest request) {
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new UnauthorizedException("La contraseña actual es incorrecta");
+        }
+        if (!request.newPassword().equals(request.confirmPassword())) {
+            throw new IllegalArgumentException("Las contraseñas no coinciden");
+        }
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("La nueva contraseña debe ser diferente");
+        }
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        users.save(user);
+        passwordResetTokens.invalidateActiveByUserId(user.getId(), Instant.now());
+        passwordAudits.save(PasswordSecurityAudit.builder()
+                .user(user)
+                .action("PASSWORD_CHANGED")
+                .build());
+        return new PasswordMessageResponse("Contraseña actualizada correctamente.");
     }
 
     private UserProfileResponse map(User user) {

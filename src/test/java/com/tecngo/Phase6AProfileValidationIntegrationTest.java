@@ -28,7 +28,7 @@ class Phase6AProfileValidationIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"fullName":"Cliente básico","email":"basic-%s@tecngo.local",
-                                "password":"TecnGo123!","role":"CLIENT"}
+                                "password":"TecnGo123!","confirmPassword":"TecnGo123!","role":"CLIENT"}
                                 """.formatted(suffix)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.verificationStatus").value("CREATED"))
@@ -68,7 +68,7 @@ class Phase6AProfileValidationIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"fullName":"Cliente archivos","email":"files-%s@tecngo.local",
-                                "password":"TecnGo123!","role":"CLIENT"}
+                                "password":"TecnGo123!","confirmPassword":"TecnGo123!","role":"CLIENT"}
                                 """.formatted(suffix)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString());

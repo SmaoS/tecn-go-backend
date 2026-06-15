@@ -224,7 +224,8 @@ class Phase5FlowIntegrationTest {
         return json(mvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(Map.of("fullName", fullName, "email", email,
-                                "password", "TecnGo123!", "role", role))))
+                                "password", "TecnGo123!", "confirmPassword", "TecnGo123!",
+                                "role", role))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.verificationStatus").value("CREATED"))
                 .andReturn().getResponse().getContentAsString());

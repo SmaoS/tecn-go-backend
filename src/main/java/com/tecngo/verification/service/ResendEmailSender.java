@@ -24,11 +24,30 @@ public class ResendEmailSender implements EmailSender {
 
     @Override
     public void sendVerification(String recipient, String recipientName, String verificationUrl) {
+        send(recipient, "Verifica tu correo en TecnGo",
+                "<p>Hola " + escape(recipientName) + ",</p>"
+                        + "<p>Confirma tu correo para activar tu cuenta:</p>"
+                        + "<p><a href=\"" + verificationUrl + "\">Verificar correo</a></p>"
+                        + "<p>Este enlace expira pronto.</p>",
+                "Email verification", verificationUrl);
+    }
+
+    @Override
+    public void sendPasswordReset(String recipient, String recipientName, String resetUrl) {
+        send(recipient, "Recupera tu contraseña de TecnGo",
+                "<p>Hola " + escape(recipientName) + ",</p>"
+                        + "<p>Recibimos una solicitud para cambiar tu contraseña.</p>"
+                        + "<p><a href=\"" + resetUrl + "\">Crear una nueva contraseña</a></p>"
+                        + "<p>Si no solicitaste este cambio, ignora este correo.</p>",
+                "Password recovery", resetUrl);
+    }
+
+    private void send(String recipient, String subject, String html, String operation, String fallbackUrl) {
         if (apiKey == null || apiKey.isBlank()) {
-            log.info("Email verification for {}: {}", recipient, verificationUrl);
+            log.info("{} for {}: {}", operation, recipient, fallbackUrl);
             return;
         }
-        log.info("Sending verification email through Resend to {}", recipient);
+        log.info("Sending {} email through Resend to {}", operation, recipient);
         try {
             Map<?, ?> response = restClientBuilder.baseUrl("https://api.resend.com").build()
                     .post()
@@ -38,22 +57,19 @@ public class ResendEmailSender implements EmailSender {
                     .body(Map.of(
                             "from", from,
                             "to", new String[]{recipient},
-                            "subject", "Verifica tu correo en TecnGo",
-                            "html", "<p>Hola " + escape(recipientName) + ",</p>"
-                                    + "<p>Confirma tu correo para activar tu cuenta:</p>"
-                                    + "<p><a href=\"" + verificationUrl + "\">Verificar correo</a></p>"
-                                    + "<p>Este enlace expira pronto.</p>"
+                            "subject", subject,
+                            "html", html
                     ))
                     .retrieve()
                     .body(Map.class);
-            log.info("Resend accepted verification email for {} with id {}", recipient,
+            log.info("Resend accepted {} email for {} with id {}", operation, recipient,
                     response == null ? "unknown" : response.get("id"));
         } catch (RestClientResponseException exception) {
-            log.error("Resend rejected verification email for {} with status {}: {}",
-                    recipient, exception.getStatusCode(), exception.getResponseBodyAsString());
+            log.error("Resend rejected {} email for {} with status {}: {}",
+                    operation, recipient, exception.getStatusCode(), exception.getResponseBodyAsString());
             throw exception;
         } catch (RuntimeException exception) {
-            log.error("Verification email delivery failed for {}", recipient, exception);
+            log.error("{} email delivery failed for {}", operation, recipient, exception);
             throw exception;
         }
     }

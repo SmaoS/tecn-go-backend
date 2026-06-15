@@ -33,14 +33,30 @@ public class ServiceRequestController {
 
     @GetMapping("/my")
     @PreAuthorize("hasRole('CLIENT')")
-    public List<ServiceRequestResponse> my(@AuthenticationPrincipal User user) {
-        return service.mine(user);
+    public List<ServiceRequestResponse> my(
+            @RequestParam(defaultValue = "false") boolean activeOnly,
+            @AuthenticationPrincipal User user) {
+        return service.clientRequests(user, activeOnly);
+    }
+
+    @GetMapping("/my/history")
+    @PreAuthorize("hasRole('CLIENT')")
+    public List<ServiceRequestResponse> myHistory(@AuthenticationPrincipal User user) {
+        return service.clientHistory(user);
     }
 
     @GetMapping("/my-assigned")
     @PreAuthorize("hasRole('TECHNICIAN')")
-    public List<ServiceRequestResponse> myAssigned(@AuthenticationPrincipal User user) {
-        return service.mine(user);
+    public List<ServiceRequestResponse> myAssigned(
+            @RequestParam(defaultValue = "false") boolean activeOnly,
+            @AuthenticationPrincipal User user) {
+        return service.assignedRequests(user, activeOnly);
+    }
+
+    @GetMapping("/my-assigned/history")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    public List<ServiceRequestResponse> myAssignedHistory(@AuthenticationPrincipal User user) {
+        return service.assignedHistory(user);
     }
 
     @GetMapping("/{id}")

@@ -76,6 +76,8 @@ correo. Sin `RESEND_API_KEY`, desarrollo escribe el enlace en los logs.
 | --- | --- | --- |
 | POST | `/api/v1/auth/register` | Público |
 | POST | `/api/v1/auth/login` | Público |
+| POST | `/api/v1/auth/forgot-password` | Público |
+| POST | `/api/v1/auth/reset-password` | Público |
 | POST | `/api/v1/auth/send-email-verification` | JWT |
 | POST | `/api/v1/auth/resend-email-verification` | JWT |
 | POST | `/api/v1/auth/verify-email` | Público |
@@ -121,6 +123,11 @@ correo. Sin `RESEND_API_KEY`, desarrollo escribe el enlace en los logs.
 | POST | `/api/v1/files/upload` | JWT, JPG/PNG/PDF |
 | GET | `/api/v1/files/{fileName}` | Perfil público; evidencias dueño/ADMIN/VERIFIER |
 | GET, PUT | `/api/v1/users/me/profile` | Dueño autenticado |
+| POST | `/api/v1/users/me/change-password` | Dueño autenticado |
+| GET | `/api/v1/service-requests/my?activeOnly=true` | CLIENT |
+| GET | `/api/v1/service-requests/my/history` | CLIENT |
+| GET | `/api/v1/service-requests/my-assigned?activeOnly=true` | TECHNICIAN |
+| GET | `/api/v1/service-requests/my-assigned/history` | TECHNICIAN |
 | POST | `/api/v1/service-requests/{id}/payment/cash` | CLIENT propietario |
 | GET | `/api/v1/payments/mine` | CLIENT |
 | GET | `/api/v1/technicians/me/earnings` | TECHNICIAN |
@@ -137,9 +144,26 @@ Registro de cliente:
   "fullName": "Ana Torres",
   "email": "ana@example.com",
   "password": "password123",
+  "confirmPassword": "password123",
   "role": "CLIENT"
 }
 ```
+
+## Recuperación y cambio de contraseña
+
+`POST /auth/forgot-password` siempre responde un mensaje genérico. Si el correo
+existe, invalida tokens anteriores, crea uno aleatorio de un solo uso y envía mediante
+Resend un enlace a `PASSWORD_RESET_URL`. En base de datos se guarda únicamente
+SHA-256 del token. `PASSWORD_RESET_TOKEN_MINUTES` controla la vigencia, inicialmente
+30 minutos.
+
+El enlace abre `/reset-password?token=...`. `POST /auth/reset-password` valida
+vigencia, uso y coincidencia de las contraseñas. Un usuario autenticado puede cambiarla
+con `POST /users/me/change-password`, indicando contraseña actual, nueva y confirmación.
+Ambas operaciones generan auditoría en `password_security_audits`.
+
+Las consultas `my?activeOnly=true` y `my-assigned?activeOnly=true` excluyen servicios
+pagados o cancelados. Los endpoints `/history` contienen esos estados cerrados.
 
 El registro inicial solo solicita nombre, correo, contraseña y tipo de cuenta. El
 usuario nace en `CREATED`. Al guardar una foto de documento desde su perfil pasa a

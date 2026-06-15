@@ -37,4 +37,33 @@ class AuthenticationFailureIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
     }
+
+    @Test
+    void forgotPasswordAlwaysReturnsGenericMessage() throws Exception {
+        mvc.perform(post("/v1/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"missing@tecngo.test"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(
+                        "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña."));
+    }
+
+    @Test
+    void registrationRejectsDifferentPasswordConfirmation() throws Exception {
+        mvc.perform(post("/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fullName":"Registro inválido",
+                                  "email":"mismatch@tecngo.test",
+                                  "password":"TecnGo123!",
+                                  "confirmPassword":"Different123!",
+                                  "role":"CLIENT"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Las contraseñas no coinciden"));
+    }
 }

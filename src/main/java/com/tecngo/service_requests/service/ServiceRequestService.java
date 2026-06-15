@@ -39,10 +39,20 @@ import java.util.List;
 import java.util.UUID;
 import java.math.BigDecimal;
 import java.util.Comparator;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class ServiceRequestService {
+    private static final Set<RequestStatus> CLIENT_ACTIVE_STATUSES = Set.of(
+            RequestStatus.QUOTE_PENDING, RequestStatus.QUOTED, RequestStatus.QUOTE_ACCEPTED,
+            RequestStatus.ON_THE_WAY, RequestStatus.ARRIVED, RequestStatus.IN_PROGRESS,
+            RequestStatus.COMPLETED);
+    private static final Set<RequestStatus> TECHNICIAN_ACTIVE_STATUSES = Set.of(
+            RequestStatus.QUOTE_ACCEPTED, RequestStatus.ON_THE_WAY, RequestStatus.ARRIVED,
+            RequestStatus.IN_PROGRESS, RequestStatus.COMPLETED);
+    private static final Set<RequestStatus> HISTORY_STATUSES = Set.of(
+            RequestStatus.PAID, RequestStatus.CANCELLED);
     private final ServiceRequestRepository requests;
     private final ServiceQuoteRepository quotes;
     private final ServiceRequestImageRepository images;
@@ -90,6 +100,39 @@ public class ServiceRequestService {
             return requests.findByTechnicianIdOrderByCreatedAtDesc(user.getId()).stream().map(this::map).toList();
         }
         throw new ForbiddenException("This role does not own service requests");
+    }
+
+    @Transactional(readOnly = true)
+    public List<ServiceRequestResponse> clientRequests(User user, boolean activeOnly) {
+        requireRole(user, Role.CLIENT);
+        return (activeOnly
+                ? requests.findByClientIdAndStatusInOrderByCreatedAtDesc(user.getId(), CLIENT_ACTIVE_STATUSES)
+                : requests.findByClientIdOrderByCreatedAtDesc(user.getId()))
+                .stream().map(this::map).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ServiceRequestResponse> clientHistory(User user) {
+        requireRole(user, Role.CLIENT);
+        return requests.findByClientIdAndStatusInOrderByCreatedAtDesc(user.getId(), HISTORY_STATUSES)
+                .stream().map(this::map).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ServiceRequestResponse> assignedRequests(User user, boolean activeOnly) {
+        requireRole(user, Role.TECHNICIAN);
+        return (activeOnly
+                ? requests.findByTechnicianIdAndStatusInOrderByCreatedAtDesc(
+                        user.getId(), TECHNICIAN_ACTIVE_STATUSES)
+                : requests.findByTechnicianIdOrderByCreatedAtDesc(user.getId()))
+                .stream().map(this::map).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ServiceRequestResponse> assignedHistory(User user) {
+        requireRole(user, Role.TECHNICIAN);
+        return requests.findByTechnicianIdAndStatusInOrderByCreatedAtDesc(user.getId(), HISTORY_STATUSES)
+                .stream().map(this::map).toList();
     }
 
     @Transactional(readOnly = true)

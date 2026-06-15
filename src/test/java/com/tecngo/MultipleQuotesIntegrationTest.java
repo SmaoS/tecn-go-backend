@@ -149,7 +149,8 @@ class MultipleQuotesIntegrationTest {
         return json(mvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body(Map.of("fullName", name, "email", email,
-                                "password", "TecnGo123!", "role", role))))
+                                "password", "TecnGo123!", "confirmPassword", "TecnGo123!",
+                                "role", role))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString());
     }
