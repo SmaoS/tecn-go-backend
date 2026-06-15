@@ -8,4 +8,5 @@ public interface PaymentProofRepository extends JpaRepository<PaymentProof, UUID
     List<PaymentProof> findByServiceRequestIdOrderByCreatedAtDesc(UUID requestId);
     List<PaymentProof> findByStatusOrderByCreatedAtAsc(PaymentProofStatus status);
     Optional<PaymentProof> findByFileUrl(String fileUrl);
+    Optional<PaymentProof> findByContentAssetId(UUID contentAssetId);
 }

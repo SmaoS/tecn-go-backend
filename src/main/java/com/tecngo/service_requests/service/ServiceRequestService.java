@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import com.tecngo.system_parameters.service.SystemParameterService;
 import com.tecngo.technician_location.repository.TechnicianLocationRepository;
+import com.tecngo.content_moderation.entity.ModerationStatus;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -333,7 +334,10 @@ public class ServiceRequestService {
 
     private ServiceRequestResponse map(ServiceRequest item, Double distanceKm, boolean approximateLocation) {
         User technician = item.getTechnician();
-        var serviceImages = images.findByServiceRequestIdOrderByCreatedAtAsc(item.getId());
+        var serviceImages = images.findByServiceRequestIdOrderByCreatedAtAsc(item.getId()).stream()
+                .filter(image -> image.getContentAsset() == null
+                        || image.getContentAsset().getModerationStatus() == ModerationStatus.APPROVED)
+                .toList();
         return new ServiceRequestResponse(item.getId(), item.getClient().getId(), item.getClient().getFullName(),
                 technician == null ? null : technician.getId(), technician == null ? null : technician.getFullName(),
                 item.getClient().getProfilePhotoUrl(), item.getClient().getAverageRating(),
@@ -352,6 +356,9 @@ public class ServiceRequestService {
                 serviceImages.isEmpty() ? null : serviceImages.getFirst().getImageUrl(),
                 serviceImages.stream().map(image -> new ServiceRequestImageResponse(
                         image.getId(), item.getId(), image.getImageUrl(), image.getPublicId(),
+                        image.getContentAsset() == null ? null : image.getContentAsset().getId(),
+                        image.getContentAsset() == null ? ModerationStatus.APPROVED
+                                : image.getContentAsset().getModerationStatus(),
                         image.getCreatedAt())).toList());
     }
 

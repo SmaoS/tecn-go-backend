@@ -1,5 +1,7 @@
 package com.tecngo.users.service;
 
+import com.tecngo.content_moderation.entity.ContentAssetKind;
+import com.tecngo.content_moderation.service.ManagedContentPolicy;
 import com.tecngo.users.dto.UserProfileRequest;
 import com.tecngo.users.dto.UserProfileResponse;
 import com.tecngo.users.entity.Role;
@@ -11,11 +13,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository users;
+    private final ManagedContentPolicy managedContent;
 
     @Transactional
     public void updateFcmToken(User user, String token) {
@@ -37,14 +41,18 @@ public class UserService {
             throw new IllegalArgumentException("Work experience description is required for technicians");
         }
         String previousDocument = clean(user.getDocumentPhotoUrl());
-        String newDocument = clean(request.documentPhotoUrl());
+        String newDocument = managedContent.validateChange(previousDocument,
+                request.documentPhotoUrl(), user, Set.of(ContentAssetKind.DOCUMENT));
         String previousProfilePhoto = clean(user.getProfilePhotoUrl());
-        String newProfilePhoto = clean(request.profilePhotoUrl());
+        String newProfilePhoto = managedContent.validateChange(previousProfilePhoto,
+                request.profilePhotoUrl(), user, Set.of(ContentAssetKind.PROFILE));
+        String newCertificate = managedContent.validateChange(user.getCertificatePhotoUrl(),
+                request.certificatePhotoUrl(), user, Set.of(ContentAssetKind.CERTIFICATE));
         user.setFullName(request.fullName().trim());
         user.setPhone(clean(request.phone()));
         user.setProfilePhotoUrl(newProfilePhoto);
         user.setDocumentPhotoUrl(newDocument);
-        user.setCertificatePhotoUrl(clean(request.certificatePhotoUrl()));
+        user.setCertificatePhotoUrl(newCertificate);
         user.setWorkExperienceDescription(clean(request.workExperienceDescription()));
         user.setHomeAddress(clean(request.homeAddress()));
         user.setHomeLatitude(request.homeLatitude());

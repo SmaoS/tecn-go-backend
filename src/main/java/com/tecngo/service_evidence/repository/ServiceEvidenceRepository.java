@@ -10,5 +10,6 @@ public interface ServiceEvidenceRepository extends JpaRepository<ServiceEvidence
     long countByServiceRequestId(UUID requestId);
     List<ServiceEvidence> findByServiceRequestIdOrderByCreatedAtAsc(UUID requestId);
     Optional<ServiceEvidence> findByFileUrl(String fileUrl);
+    Optional<ServiceEvidence> findByContentAssetId(UUID contentAssetId);
     List<ServiceEvidence> findAllByOrderByCreatedAtDesc();
 }

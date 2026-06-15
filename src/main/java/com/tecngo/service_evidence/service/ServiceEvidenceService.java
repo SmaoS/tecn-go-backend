@@ -1,6 +1,8 @@
 package com.tecngo.service_evidence.service;
 
 import com.tecngo.files.service.FileStorage;
+import com.tecngo.content_moderation.entity.*;
+import com.tecngo.content_moderation.service.ModeratedFileService;
 import com.tecngo.service_evidence.dto.ServiceEvidenceResponse;
 import com.tecngo.service_evidence.entity.*;
 import com.tecngo.service_evidence.repository.ServiceEvidenceRepository;
@@ -26,6 +28,7 @@ public class ServiceEvidenceService {
     private final FileStorage storage;
     private final SystemParameterService parameters;
     private final ApplicationEventPublisher events;
+    private final ModeratedFileService moderatedFiles;
 
     @Transactional
     public ServiceEvidenceResponse upload(UUID requestId, EvidenceType type, String description,
@@ -34,10 +37,13 @@ public class ServiceEvidenceService {
         requireParticipant(request, user, false);
         if (evidences.countByServiceRequestId(requestId) >= parameters.maxServiceEvidenceFiles())
             throw new ConflictException("Maximum number of service evidences reached");
-        var stored = storage.store(file, false, "tecngo/service-evidences", TYPES);
+        var result = moderatedFiles.store(file, "tecngo/service-evidences", TYPES,
+                ContentAssetKind.SERVICE_EVIDENCE, user);
+        var stored = result.stored();
         ServiceEvidence evidence = evidences.save(ServiceEvidence.builder().serviceRequest(request).uploadedBy(user)
                 .uploadedByRole(user.getRole()).evidenceType(type).fileUrl(stored.accessUrl())
-                .publicId(stored.publicId()).description(clean(description)).build());
+                .publicId(stored.publicId()).contentAsset(result.asset())
+                .description(clean(description)).build());
         if (user.getRole() == Role.TECHNICIAN) {
             events.publishEvent(new UserNotificationEvent(
                     request.getClient().getId(),
@@ -53,7 +59,10 @@ public class ServiceEvidenceService {
     public List<ServiceEvidenceResponse> list(UUID requestId, User user) {
         ServiceRequest request = requireRequest(requestId);
         requireParticipant(request, user, true);
-        return evidences.findByServiceRequestIdOrderByCreatedAtAsc(requestId).stream().map(this::map).toList();
+        return evidences.findByServiceRequestIdOrderByCreatedAtAsc(requestId).stream()
+                .filter(item -> item.getContentAsset() == null
+                        || item.getContentAsset().getModerationStatus() == ModerationStatus.APPROVED)
+                .map(this::map).toList();
     }
     @Transactional(readOnly = true)
     public List<ServiceEvidenceResponse> listAll(User user) {
@@ -88,7 +97,11 @@ public class ServiceEvidenceService {
     private ServiceEvidenceResponse map(ServiceEvidence item) {
         return new ServiceEvidenceResponse(item.getId(), item.getServiceRequest().getId(),
                 item.getUploadedBy().getId(), item.getUploadedBy().getFullName(), item.getUploadedByRole(),
-                item.getEvidenceType(), item.getFileUrl(), item.getDescription(), item.getCreatedAt());
+                item.getEvidenceType(), item.getFileUrl(),
+                item.getContentAsset() == null ? null : item.getContentAsset().getId(),
+                item.getContentAsset() == null ? ModerationStatus.APPROVED
+                        : item.getContentAsset().getModerationStatus(),
+                item.getDescription(), item.getCreatedAt());
     }
     private String clean(String value) { return value == null || value.isBlank() ? null : value.trim(); }
 }

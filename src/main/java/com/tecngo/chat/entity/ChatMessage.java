@@ -30,6 +30,19 @@ public class ChatMessage {
     @Column(nullable = false, length = 2000)
     private String message;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ChatModerationStatus moderationStatus;
+
+    @Column(length = 1000)
+    private String moderationReason;
+
+    private Instant moderatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "moderated_by_user_id")
+    private User moderatedBy;
+
     @Column(nullable = false)
     private Instant createdAt;
 
@@ -38,5 +51,6 @@ public class ChatMessage {
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = Instant.now();
+        if (moderationStatus == null) moderationStatus = ChatModerationStatus.PENDING;
     }
 }

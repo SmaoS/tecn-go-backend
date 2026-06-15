@@ -1,4 +1,5 @@
 package com.tecngo.payment_proofs.entity;
+import com.tecngo.content_moderation.entity.ContentAsset;
 
 import com.tecngo.service_requests.entity.ServiceRequest;
 import com.tecngo.users.entity.User;
@@ -16,6 +17,7 @@ public class PaymentProof {
     @ManyToOne(optional = false, fetch = FetchType.LAZY) @JoinColumn(name = "uploaded_by_user_id") private User uploadedBy;
     @Column(nullable = false, length = 1000) private String fileUrl;
     @Column(nullable = false, length = 500) private String publicId;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "content_asset_id") private ContentAsset contentAsset;
     @Column(nullable = false, precision = 12, scale = 2) private BigDecimal amount;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private ProofPaymentMethod paymentMethod;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private PaymentProofStatus status;

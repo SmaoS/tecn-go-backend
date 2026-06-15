@@ -1,5 +1,6 @@
 package com.tecngo.service_requests.entity;
 
+import com.tecngo.content_moderation.entity.ContentAsset;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -27,6 +28,10 @@ public class ServiceRequestImage {
 
     @Column(nullable = false, length = 500)
     private String publicId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "content_asset_id")
+    private ContentAsset contentAsset;
 
     @Column(nullable = false)
     private Instant createdAt;

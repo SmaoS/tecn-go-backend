@@ -18,14 +18,18 @@ public class AppVersionService {
     @Transactional(readOnly=true)
     public AppVersionCheckResponse check(AppPlatform platform, String currentVersion) {
         validateVersion(currentVersion);
-        AppVersion item = repository.findByPlatformAndActiveTrue(platform)
-                .orElseThrow(() -> new NotFoundException("No active app version configuration for " + platform));
+        AppVersion item = repository.findByPlatform(platform)
+                .orElseThrow(() -> new NotFoundException("No app version configuration for " + platform));
+        if (!item.isActive() || !parameters.appVersionCheckEnabled()) {
+            return new AppVersionCheckResponse(platform, currentVersion, item.getLatestVersion(),
+                    item.getMinimumSupportedVersion(), false, false,
+                    item.getUpdateUrl(), item.getMessage());
+        }
         boolean belowMinimum = compare(currentVersion, item.getMinimumSupportedVersion()) < 0;
         boolean belowLatest = compare(currentVersion, item.getLatestVersion()) < 0;
-        boolean enabled = parameters.appVersionCheckEnabled();
-        boolean forced = enabled && (belowMinimum || item.isForceUpdate());
+        boolean forced = belowMinimum || item.isForceUpdate();
         return new AppVersionCheckResponse(platform, currentVersion, item.getLatestVersion(),
-                item.getMinimumSupportedVersion(), enabled && (belowLatest || item.isForceUpdate()), forced,
+                item.getMinimumSupportedVersion(), belowLatest || item.isForceUpdate(), forced,
                 item.getUpdateUrl(), item.getMessage());
     }
     @Transactional(readOnly=true) public List<AppVersionResponse> list(){return repository.findAll().stream().map(this::map).toList();}

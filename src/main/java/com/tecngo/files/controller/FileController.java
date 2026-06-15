@@ -2,6 +2,10 @@ package com.tecngo.files.controller;
 
 import com.tecngo.files.dto.FileUploadResponse;
 import com.tecngo.files.service.FileStorage;
+import com.tecngo.content_moderation.entity.*;
+import com.tecngo.content_moderation.repository.ContentAssetRepository;
+import com.tecngo.content_moderation.service.ContentModerationService;
+import com.tecngo.content_moderation.service.ModeratedFileService;
 import com.tecngo.shared.exception.ForbiddenException;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
@@ -24,30 +28,44 @@ public class FileController {
     private final UserRepository users;
     private final ServiceEvidenceRepository evidences;
     private final PaymentProofRepository paymentProofs;
+    private final ContentAssetRepository assets;
+    private final ContentModerationService contentModeration;
+    private final ModeratedFileService moderatedFiles;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public FileUploadResponse upload(@RequestPart("file") MultipartFile file,
-                                     @RequestParam(defaultValue = "DOCUMENT") FileKind kind) {
-        boolean publicAccess = kind == FileKind.PROFILE;
+                                     @RequestParam(defaultValue = "DOCUMENT") FileKind kind,
+                                     @AuthenticationPrincipal User user) {
         String folder = switch (kind) {
             case PROFILE -> "tecngo/profiles";
             case DOCUMENT -> "tecngo/documents";
             case CERTIFICATE -> "tecngo/certificates";
         };
-        var stored = storage.store(file, publicAccess, folder,
-                Set.of("image/jpeg", "image/png", "application/pdf"));
+        ContentAssetKind assetKind = switch (kind) {
+            case PROFILE -> ContentAssetKind.PROFILE;
+            case DOCUMENT -> ContentAssetKind.DOCUMENT;
+            case CERTIFICATE -> ContentAssetKind.CERTIFICATE;
+        };
+        var result = moderatedFiles.store(file, folder,
+                Set.of("image/jpeg", "image/png", "application/pdf"), assetKind, user);
+        var stored = result.stored();
         return new FileUploadResponse(stored.fileName(), stored.contentType(), stored.size(),
-                stored.accessUrl(), stored.secureUrl(), stored.publicId());
+                stored.accessUrl(), null, stored.publicId(), result.asset().getId(),
+                result.asset().getModerationStatus());
     }
 
     @GetMapping("/{fileName:.+}")
     public ResponseEntity<Resource> download(@PathVariable String fileName,
                                              @AuthenticationPrincipal User viewer) {
         String url = "/v1/files/" + fileName;
+        var asset = assets.findByFileUrl(url).orElse(null);
+        if (asset != null && !contentModeration.canDownload(asset, viewer)) {
+            throw new ForbiddenException("This file is private or has not been approved");
+        }
         boolean privateEvidence = fileName.startsWith("private-")
                 || users.existsByDocumentPhotoUrlOrCertificatePhotoUrl(url, url);
-        if (privateEvidence && !canViewPrivate(viewer, url)) {
+        if (asset == null && privateEvidence && !canViewPrivate(viewer, url)) {
             throw new ForbiddenException("This evidence file is private");
         }
         Resource resource = storage.load(fileName);

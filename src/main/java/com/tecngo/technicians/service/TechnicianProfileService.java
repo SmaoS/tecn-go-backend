@@ -1,5 +1,7 @@
 package com.tecngo.technicians.service;
 
+import com.tecngo.content_moderation.entity.ContentAssetKind;
+import com.tecngo.content_moderation.service.ManagedContentPolicy;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.shared.exception.NotFoundException;
 import com.tecngo.services.entity.ServiceCategory;
@@ -33,6 +35,7 @@ public class TechnicianProfileService {
     private final UserService userService;
     private final EmailVerificationService emailVerification;
     private final ReferralService referrals;
+    private final ManagedContentPolicy managedContent;
 
     @Transactional
     public TechnicianProfileResponse create(TechnicianProfileRequest request, User user) {
@@ -144,9 +147,12 @@ public class TechnicianProfileService {
 
     private void updateUserEvidence(User user, TechnicianProfileRequest request) {
         String previousDocument = user.getDocumentPhotoUrl();
-        user.setProfilePhotoUrl(clean(request.profilePhotoUrl()));
-        user.setDocumentPhotoUrl(request.documentPhotoUrl().trim());
-        user.setCertificatePhotoUrl(clean(request.certificatePhotoUrl()));
+        user.setProfilePhotoUrl(managedContent.validateChange(user.getProfilePhotoUrl(),
+                request.profilePhotoUrl(), user, Set.of(ContentAssetKind.PROFILE)));
+        user.setDocumentPhotoUrl(managedContent.validateChange(previousDocument,
+                request.documentPhotoUrl(), user, Set.of(ContentAssetKind.DOCUMENT)));
+        user.setCertificatePhotoUrl(managedContent.validateChange(user.getCertificatePhotoUrl(),
+                request.certificatePhotoUrl(), user, Set.of(ContentAssetKind.CERTIFICATE)));
         user.setWorkExperienceDescription(request.workExperienceDescription().trim());
         user.setHomeAddress(request.homeAddress().trim());
         user.setHomeLatitude(request.homeLatitude());

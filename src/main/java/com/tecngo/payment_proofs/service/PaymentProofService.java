@@ -1,6 +1,8 @@
 package com.tecngo.payment_proofs.service;
 
 import com.tecngo.files.service.FileStorage;
+import com.tecngo.content_moderation.entity.*;
+import com.tecngo.content_moderation.service.ModeratedFileService;
 import com.tecngo.payment_proofs.dto.*;
 import com.tecngo.payment_proofs.entity.*;
 import com.tecngo.payment_proofs.repository.PaymentProofRepository;
@@ -31,6 +33,7 @@ public class PaymentProofService {
     private final FileStorage storage;
     private final SystemParameterService parameters;
     private final ApplicationEventPublisher events;
+    private final ModeratedFileService moderatedFiles;
 
     @Transactional
     public PaymentProofResponse upload(UUID requestId, BigDecimal amount, ProofPaymentMethod method,
@@ -40,10 +43,12 @@ public class PaymentProofService {
         if (amount == null || amount.signum() <= 0) throw new IllegalArgumentException("Amount must be greater than zero");
         if (proofs.countByServiceRequestId(requestId) >= parameters.maxPaymentProofFiles())
             throw new ConflictException("Maximum number of payment proofs reached");
-        var stored = storage.store(file, false, "tecngo/payment-proofs", TYPES);
+        var result = moderatedFiles.store(file, "tecngo/payment-proofs", TYPES,
+                ContentAssetKind.PAYMENT_PROOF, user);
+        var stored = result.stored();
         PaymentProof proof = proofs.save(PaymentProof.builder().serviceRequest(request).uploadedBy(user)
                 .fileUrl(stored.accessUrl()).publicId(stored.publicId()).amount(amount)
-                .paymentMethod(method).build());
+                .contentAsset(result.asset()).paymentMethod(method).build());
         if (user.getRole() == Role.CLIENT && request.getTechnician() != null) {
             notifyUser(request.getTechnician(), request, "Nuevo comprobante de pago",
                     user.getFullName() + " subió un comprobante de pago",
@@ -56,7 +61,10 @@ public class PaymentProofService {
         ServiceRequest request = requireRequest(requestId);
         boolean staff = user.getRole() == Role.ADMIN || user.getRole() == Role.VERIFIER;
         if (!staff) requireParticipant(request, user);
-        return proofs.findByServiceRequestIdOrderByCreatedAtDesc(requestId).stream().map(this::map).toList();
+        return proofs.findByServiceRequestIdOrderByCreatedAtDesc(requestId).stream()
+                .filter(item -> staff || item.getContentAsset() == null
+                        || item.getContentAsset().getModerationStatus() == ModerationStatus.APPROVED)
+                .map(this::map).toList();
     }
     @Transactional(readOnly = true)
     public List<PaymentProofResponse> pending(User user) {
@@ -106,7 +114,11 @@ public class PaymentProofService {
                 item.getUploadedBy().getId(), item.getUploadedBy().getFullName(), item.getFileUrl(),
                 item.getAmount(), item.getPaymentMethod(), item.getStatus(),
                 item.getReviewedBy() == null ? null : item.getReviewedBy().getId(), item.getReviewedAt(),
-                item.getReviewComment(), item.getCreatedAt());
+                item.getReviewComment(),
+                item.getContentAsset() == null ? null : item.getContentAsset().getId(),
+                item.getContentAsset() == null ? ModerationStatus.APPROVED
+                        : item.getContentAsset().getModerationStatus(),
+                item.getCreatedAt());
     }
     private String clean(String value) { return value == null || value.isBlank() ? null : value.trim(); }
     private void notifyUser(User recipient, ServiceRequest request, String title, String message,

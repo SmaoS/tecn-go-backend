@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Set;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmailIgnoreCase(String email);
@@ -18,5 +19,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByVerificationStatusOrderByCreatedAtAsc(VerificationStatus status);
     long countByVerificationStatus(VerificationStatus status);
     List<User> findByRoleOrderByCreatedAtDesc(Role role);
+    List<User> findByRoleInOrderByCreatedAtDesc(Set<Role> roles);
     List<User> findByAccountStatusNotOrderByCreatedAtDesc(AccountStatus status);
 }

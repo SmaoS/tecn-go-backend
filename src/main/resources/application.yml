@@ -43,6 +43,10 @@ app:
     platform-fee-percentage: ${PLATFORM_FEE_PERCENTAGE:10}
   files:
     max-size-bytes: ${FILE_MAX_SIZE_BYTES:5242880}
+  image-moderation:
+    provider: ${IMAGE_MODERATION_PROVIDER:manual}
+    cloudinary-mode: ${IMAGE_MODERATION_CLOUDINARY_MODE:aws_rek}
+    require-managed-uploads: ${IMAGE_MODERATION_REQUIRE_MANAGED_UPLOADS:true}
   email:
     provider: ${EMAIL_PROVIDER:resend}
     resend-api-key: ${RESEND_API_KEY:}

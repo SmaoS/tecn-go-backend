@@ -1,6 +1,7 @@
 package com.tecngo.chat.repository;
 
 import com.tecngo.chat.entity.ChatMessage;
+import com.tecngo.chat.entity.ChatModerationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +13,7 @@ import java.util.UUID;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> {
     List<ChatMessage> findByRoomIdOrderByCreatedAtAsc(UUID roomId);
+    List<ChatMessage> findByModerationStatusInOrderByCreatedAtDesc(List<ChatModerationStatus> statuses);
 
     @Modifying
     @Query("""

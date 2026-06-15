@@ -295,3 +295,50 @@ docker build -t tecngo-backend .
 Flyway administra las migraciones versionadas. Hibernate conserva `ddl-auto=update`
 durante el MVP para incorporar tablas nuevas; debe cambiarse a `validate` antes de
 producción cuando el esquema completo esté cubierto por migraciones.
+
+## Moderación y privacidad de imágenes
+
+La migración `V20` agrega el inventario privado `content_assets`, reportes y estados
+`PENDING_REVIEW`, `APPROVED`, `REJECTED` y `FLAGGED`. Toda carga nueva se almacena en
+Cloudinary con tipo `authenticated`; la API nunca entrega la URL interna de Cloudinary
+y sirve el archivo mediante `/v1/files/{token}` después de validar JWT, participación
+en el servicio y estado de moderación.
+
+Configure `IMAGE_MODERATION_PROVIDER=cloudinary` y habilite el add-on de moderación
+correspondiente en Cloudinary. `IMAGE_MODERATION_CLOUDINARY_MODE` usa `aws_rek` por
+defecto. Si el proveedor no responde, la imagen queda `FLAGGED` para revisión humana;
+no se publica por omisión. Los PDF se aprueban como archivo no visual, pero permanecen
+privados y sujetos a los permisos de documentos, certificados o comprobantes.
+
+Endpoints:
+
+```text
+POST /v1/content/{contentAssetId}/report
+GET  /v1/admin/content-moderation
+PUT  /v1/admin/content-moderation/{contentAssetId}/approve
+PUT  /v1/admin/content-moderation/{contentAssetId}/reject
+```
+
+`ADMIN` y `VERIFIER` pueden revisar contenido. Solo `ADMIN` puede inactivar usuarios
+desde el panel de operaciones.
+
+## Moderación de chat
+
+La migración `V21` incorpora los estados `PENDING`, `APPROVED`, `FLAGGED` y `BLOCKED`,
+reportes por participante y auditoría de decisiones automáticas y manuales. El filtro
+local detecta amenazas, contenido sexual, fraude, lenguaje ofensivo, enlaces externos y
+posibles datos sensibles. Los mensajes bloqueados nunca exponen su texto a cliente o
+técnico; los marcados muestran que están en revisión.
+
+Endpoints:
+
+```text
+POST /v1/chat/messages/{messageId}/report
+GET  /v1/admin/chat-moderation/messages
+PUT  /v1/admin/chat-moderation/messages/{messageId}/approve
+PUT  /v1/admin/chat-moderation/messages/{messageId}/block
+PUT  /v1/admin/chat-moderation/messages/{messageId}/sanction
+```
+
+`ADMIN` y `VERIFIER` revisan mensajes. La sanción de cuenta permanece restringida a
+`ADMIN` y registra el motivo como riesgo de seguridad.

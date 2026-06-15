@@ -71,7 +71,10 @@ public class CloudinaryService implements FileStorage {
     @Override
     public void delete(String publicId) {
         try {
-            cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", "image"));
+            cloudinary.uploader().destroy(publicId, ObjectUtils.asMap(
+                    "resource_type", "image",
+                    "type", "authenticated"
+            ));
         } catch (IOException exception) {
             throw new IllegalStateException("Cloudinary delete failed", exception);
         }

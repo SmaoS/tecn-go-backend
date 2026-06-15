@@ -1,6 +1,8 @@
 package com.tecngo.service_requests.service;
 
 import com.tecngo.files.service.FileStorage;
+import com.tecngo.content_moderation.entity.*;
+import com.tecngo.content_moderation.service.ModeratedFileService;
 import com.tecngo.service_requests.dto.ServiceRequestImageResponse;
 import com.tecngo.service_requests.entity.RequestStatus;
 import com.tecngo.service_requests.entity.ServiceRequest;
@@ -32,6 +34,7 @@ public class ServiceRequestImageService {
     private final ServiceRequestRepository requests;
     private final FileStorage storage;
     private final SystemParameterService parameters;
+    private final ModeratedFileService moderatedFiles;
 
     @Transactional
     public ServiceRequestImageResponse upload(UUID requestId, MultipartFile file, User client) {
@@ -40,11 +43,14 @@ public class ServiceRequestImageService {
         if (images.countByServiceRequestId(requestId) >= parameters.maxServiceRequestImages()) {
             throw new ConflictException("Maximum number of service images reached");
         }
-        var stored = storage.store(file, true, "tecngo/service-requests", TYPES);
+        var result = moderatedFiles.store(file, "tecngo/service-requests", TYPES,
+                ContentAssetKind.SERVICE_REQUEST_IMAGE, client);
+        var stored = result.stored();
         return map(images.save(ServiceRequestImage.builder()
                 .serviceRequest(request)
-                .imageUrl(stored.secureUrl())
+                .imageUrl(stored.accessUrl())
                 .publicId(stored.publicId())
+                .contentAsset(result.asset())
                 .build()));
     }
 
@@ -56,7 +62,10 @@ public class ServiceRequestImageService {
                 || user.getRole() == Role.TECHNICIAN && request.getStatus() == RequestStatus.QUOTE_PENDING
                 || user.getRole() == Role.ADMIN;
         if (!participant) throw new ForbiddenException("Service images are only visible to participants");
-        return images.findByServiceRequestIdOrderByCreatedAtAsc(requestId).stream().map(this::map).toList();
+        return images.findByServiceRequestIdOrderByCreatedAtAsc(requestId).stream()
+                .filter(item -> item.getContentAsset() == null
+                        || item.getContentAsset().getModerationStatus() == ModerationStatus.APPROVED)
+                .map(this::map).toList();
     }
 
     @Transactional
@@ -86,6 +95,10 @@ public class ServiceRequestImageService {
 
     private ServiceRequestImageResponse map(ServiceRequestImage item) {
         return new ServiceRequestImageResponse(item.getId(), item.getServiceRequest().getId(),
-                item.getImageUrl(), item.getPublicId(), item.getCreatedAt());
+                item.getImageUrl(), item.getPublicId(),
+                item.getContentAsset() == null ? null : item.getContentAsset().getId(),
+                item.getContentAsset() == null ? ModerationStatus.APPROVED
+                        : item.getContentAsset().getModerationStatus(),
+                item.getCreatedAt());
     }
 }
