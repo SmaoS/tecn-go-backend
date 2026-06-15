@@ -1,5 +1,6 @@
 package com.tecngo.service_requests.service;
 
+import com.tecngo.catalogs.service.GeographicCatalogService;
 import com.tecngo.service_requests.dto.*;
 import com.tecngo.service_requests.entity.RequestStatus;
 import com.tecngo.service_requests.entity.ServiceRequest;
@@ -66,6 +67,7 @@ public class ServiceRequestService {
     private final TechnicianLocationRepository technicianLocations;
     private final UserAccessService userAccess;
     private final LegalService legal;
+    private final GeographicCatalogService geographicCatalogs;
     @Value("${app.notifications.new-request-radius-km:25}")
     private double newRequestRadiusKm;
 
@@ -78,9 +80,13 @@ public class ServiceRequestService {
             throw new ConflictException("Complete your profile with a document before requesting a service");
         }
         var category = categories.requireActive(request.categoryId());
+        var city = request.cityId() != null
+                ? geographicCatalogs.requireCity(request.cityId())
+                : client.getCity();
         ServiceRequest saved = requests.save(ServiceRequest.builder()
                 .client(client)
                 .category(category)
+                .city(city)
                 .description(request.description())
                 .address(request.address())
                 .latitude(request.latitude())
@@ -154,7 +160,6 @@ public class ServiceRequestService {
             throw new IllegalArgumentException("radiusKm must be greater than 0 and at most 100");
         }
         var profile = technicianProfiles.approvedProfile(technician);
-        if (!profile.isAvailable()) return List.of();
         if (profile.getLatitude() == null || profile.getLongitude() == null) {
             throw new ConflictException("Technician location is required");
         }
@@ -165,6 +170,8 @@ public class ServiceRequestService {
         double originLongitude = liveLocation != null && liveLocation.isOnline()
                 ? liveLocation.getLongitude() : profile.getLongitude();
         return requests.findAvailable(RequestStatus.QUOTE_PENDING, categoryIds).stream()
+                .filter(item -> technician.getCity() == null || item.getCity() == null
+                        || technician.getCity().getId().equals(item.getCity().getId()))
                 .map(item -> map(item, distance.kilometers(originLatitude, originLongitude,
                         item.getLatitude(), item.getLongitude()), true))
                 .filter(item -> item.distanceKm() <= radiusKm)
@@ -329,6 +336,8 @@ public class ServiceRequestService {
                 .filter(profile -> profile.getLatitude() != null && profile.getLongitude() != null)
                 .filter(profile -> profile.getCategories().stream()
                         .anyMatch(category -> category.getId().equals(request.getCategory().getId())))
+                .filter(profile -> profile.getUser().getCity() == null || request.getCity() == null
+                        || profile.getUser().getCity().getId().equals(request.getCity().getId()))
                 .filter(profile -> distance.kilometers(profile.getLatitude(), profile.getLongitude(),
                         request.getLatitude(), request.getLongitude()) <= newRequestRadiusKm)
                 .forEach(profile -> events.publishEvent(new UserNotificationEvent(
@@ -404,7 +413,9 @@ public class ServiceRequestService {
                         image.getContentAsset() == null ? null : image.getContentAsset().getId(),
                         image.getContentAsset() == null ? ModerationStatus.APPROVED
                                 : image.getContentAsset().getModerationStatus(),
-                        image.getCreatedAt())).toList());
+                        image.getCreatedAt())).toList(),
+                item.getCity() == null ? null : item.getCity().getId(),
+                item.getCity() == null ? null : item.getCity().getName());
     }
 
     private ServiceQuoteResponse mapQuote(ServiceQuote quote) {

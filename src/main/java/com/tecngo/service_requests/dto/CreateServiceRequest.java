@@ -14,5 +14,6 @@ public record CreateServiceRequest(
         @NotBlank String address,
         @NotNull Double latitude,
         @NotNull Double longitude,
-        @DecimalMin("0.00") BigDecimal estimatedPrice
+        @DecimalMin("0.00") BigDecimal estimatedPrice,
+        UUID cityId
 ) {}

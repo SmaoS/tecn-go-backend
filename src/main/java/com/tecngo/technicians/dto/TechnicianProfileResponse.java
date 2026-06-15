@@ -15,5 +15,6 @@ public record TechnicianProfileResponse(
         String certificatePhotoUrl, String workExperienceDescription, BigDecimal averageRating,
         long completedServicesCount, long paidServicesCount, VerificationStatus verificationStatus,
         String homeAddress, Double homeLatitude, Double homeLongitude, String homeCity,
-        String homeNeighborhood
+        String homeNeighborhood, UUID countryId, String countryName, UUID departmentId,
+        String departmentName, UUID cityId, String cityName
 ) {}

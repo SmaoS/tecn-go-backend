@@ -65,7 +65,8 @@ public class TechnicianLocationService {
     }
 
     @Transactional(readOnly = true)
-    public List<NearbyTechnicianResponse> nearby(double latitude, double longitude, double radiusKm) {
+    public List<NearbyTechnicianResponse> nearby(double latitude, double longitude, double radiusKm,
+                                                 UUID cityId) {
         if (radiusKm <= 0 || radiusKm > 100) {
             throw new IllegalArgumentException("radiusKm must be greater than 0 and at most 100");
         }
@@ -75,7 +76,9 @@ public class TechnicianLocationService {
                 .filter(item -> !item.getUpdatedAt().isBefore(threshold))
                 .filter(item -> profileRepository.findByUserId(item.getTechnician().getId())
                         .map(profile -> profile.getStatus() == TechnicianStatus.APPROVED
-                                && profile.isAvailable())
+                                && profile.isAvailable()
+                                && (cityId == null || profile.getUser().getCity() != null
+                                && cityId.equals(profile.getUser().getCity().getId())))
                         .orElse(false))
                 .map(item -> new NearbyTechnicianResponse(
                         item.getTechnician().getId(),

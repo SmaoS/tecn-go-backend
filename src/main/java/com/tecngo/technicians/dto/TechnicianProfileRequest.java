@@ -23,5 +23,8 @@ public record TechnicianProfileRequest(
         @NotNull Double homeLatitude,
         @NotNull Double homeLongitude,
         @Size(max = 120) String homeCity,
-        @Size(max = 120) String homeNeighborhood
+        @Size(max = 120) String homeNeighborhood,
+        UUID countryId,
+        UUID departmentId,
+        UUID cityId
 ) {}

@@ -1,5 +1,6 @@
 package com.tecngo.technicians.service;
 
+import com.tecngo.catalogs.service.GeographicCatalogService;
 import com.tecngo.content_moderation.entity.ContentAssetKind;
 import com.tecngo.content_moderation.service.ManagedContentPolicy;
 import com.tecngo.shared.exception.ConflictException;
@@ -37,6 +38,7 @@ public class TechnicianProfileService {
     private final EmailVerificationService emailVerification;
     private final ReferralService referrals;
     private final ManagedContentPolicy managedContent;
+    private final GeographicCatalogService geographicCatalogs;
 
     @Transactional
     public TechnicianProfileResponse create(TechnicianProfileRequest request, User user) {
@@ -149,7 +151,13 @@ public class TechnicianProfileService {
                 user.getDocumentPhotoUrl(), user.getCertificatePhotoUrl(), user.getWorkExperienceDescription(),
                 user.getAverageRating(), user.getCompletedServicesCount(), user.getPaidServicesCount(),
                 user.getVerificationStatus(), user.getHomeAddress(), user.getHomeLatitude(),
-                user.getHomeLongitude(), user.getHomeCity(), user.getHomeNeighborhood());
+                user.getHomeLongitude(), user.getHomeCity(), user.getHomeNeighborhood(),
+                user.getCountry() == null ? null : user.getCountry().getId(),
+                user.getCountry() == null ? null : user.getCountry().getName(),
+                user.getDepartment() == null ? null : user.getDepartment().getId(),
+                user.getDepartment() == null ? null : user.getDepartment().getName(),
+                user.getCity() == null ? null : user.getCity().getId(),
+                user.getCity() == null ? null : user.getCity().getName());
     }
 
     private Set<ServiceCategory> categories(Set<UUID> ids) {
@@ -170,8 +178,17 @@ public class TechnicianProfileService {
         user.setHomeAddress(request.homeAddress().trim());
         user.setHomeLatitude(request.homeLatitude());
         user.setHomeLongitude(request.homeLongitude());
-        user.setHomeCity(clean(request.homeCity()));
         user.setHomeNeighborhood(clean(request.homeNeighborhood()));
+        if (request.countryId() == null && request.departmentId() == null && request.cityId() == null) {
+            user.setHomeCity(clean(request.homeCity()));
+        } else {
+            var selection = geographicCatalogs.requireSelection(
+                    request.countryId(), request.departmentId(), request.cityId());
+            user.setCountry(selection.country());
+            user.setDepartment(selection.department());
+            user.setCity(selection.city());
+            user.setHomeCity(selection.city().getName());
+        }
         userService.markPendingWhenEvidenceChanges(user, previousDocument, user.getDocumentPhotoUrl());
         users.save(user);
     }

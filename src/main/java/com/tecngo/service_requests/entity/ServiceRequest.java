@@ -1,5 +1,6 @@
 package com.tecngo.service_requests.entity;
 
+import com.tecngo.catalogs.entity.City;
 import com.tecngo.services.entity.ServiceCategory;
 import com.tecngo.users.entity.User;
 import jakarta.persistence.*;
@@ -26,6 +27,9 @@ public class ServiceRequest {
     private User technician;
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     private ServiceCategory category;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "city_id")
+    private City city;
     @Column(nullable = false, length = 1000)
     private String description;
     @Column(nullable = false)

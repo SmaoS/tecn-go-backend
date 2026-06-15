@@ -50,7 +50,8 @@ public class TechnicianLocationController {
     @PreAuthorize("hasRole('CLIENT')")
     public List<NearbyTechnicianResponse> nearby(@RequestParam double latitude,
                                                 @RequestParam double longitude,
-                                                @RequestParam(defaultValue = "25") double radiusKm) {
-        return service.nearby(latitude, longitude, radiusKm);
+                                                @RequestParam(defaultValue = "25") double radiusKm,
+                                                @RequestParam(required = false) UUID cityId) {
+        return service.nearby(latitude, longitude, radiusKm, cityId);
     }
 }

@@ -1,5 +1,8 @@
 package com.tecngo.users.entity;
 
+import com.tecngo.catalogs.entity.City;
+import com.tecngo.catalogs.entity.Country;
+import com.tecngo.catalogs.entity.Department;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -99,6 +102,18 @@ public class User implements UserDetails {
 
     @Column(length = 120)
     private String homeNeighborhood;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "country_id")
+    private Country country;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private Department department;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "city_id")
+    private City city;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

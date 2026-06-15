@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/v1/auth/register", "/v1/auth/login", "/v1/auth/verify-email",
                                 "/v1/auth/forgot-password", "/v1/auth/reset-password",
                                 "/v1/services/**", "/v1/service-categories/**", "/swagger-ui/**",
+                                "/v1/catalogs/**",
                                 "/swagger-ui.html", "/v3/api-docs/**", "/actuator/health", "/actuator/info",
                                 "/version", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/referrals/validate/**",

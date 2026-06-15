@@ -1,5 +1,6 @@
 package com.tecngo.users.service;
 
+import com.tecngo.catalogs.service.GeographicCatalogService;
 import com.tecngo.content_moderation.entity.ContentAssetKind;
 import com.tecngo.content_moderation.service.ManagedContentPolicy;
 import com.tecngo.users.dto.UserProfileRequest;
@@ -30,6 +31,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetTokenRepository passwordResetTokens;
     private final PasswordSecurityAuditRepository passwordAudits;
+    private final GeographicCatalogService geographicCatalogs;
 
     @Transactional
     public void updateFcmToken(User user, String token) {
@@ -67,8 +69,9 @@ public class UserService {
         user.setHomeAddress(clean(request.homeAddress()));
         user.setHomeLatitude(request.homeLatitude());
         user.setHomeLongitude(request.homeLongitude());
-        user.setHomeCity(clean(request.homeCity()));
         user.setHomeNeighborhood(clean(request.homeNeighborhood()));
+        applyGeographicSelection(user, request.countryId(), request.departmentId(), request.cityId(),
+                request.homeCity());
         if (user.getRole() == Role.TECHNICIAN && user.getHomeAddress() == null) {
             throw new IllegalArgumentException("Home address is required for technicians");
         }
@@ -111,7 +114,27 @@ public class UserService {
                 user.isDocumentsVerified(), user.getHomeAddress(), user.getHomeLatitude(),
                 user.getHomeLongitude(), user.getHomeCity(), user.getHomeNeighborhood(),
                 user.getAccountStatus(), user.getInactiveReason(), user.getInactiveComment(),
-                user.isProfilePhotoFaceValidated());
+                user.isProfilePhotoFaceValidated(),
+                user.getCountry() == null ? null : user.getCountry().getId(),
+                user.getCountry() == null ? null : user.getCountry().getName(),
+                user.getDepartment() == null ? null : user.getDepartment().getId(),
+                user.getDepartment() == null ? null : user.getDepartment().getName(),
+                user.getCity() == null ? null : user.getCity().getId(),
+                user.getCity() == null ? null : user.getCity().getName());
+    }
+
+    private void applyGeographicSelection(User user, java.util.UUID countryId,
+                                          java.util.UUID departmentId, java.util.UUID cityId,
+                                          String legacyCity) {
+        if (countryId == null && departmentId == null && cityId == null) {
+            user.setHomeCity(clean(legacyCity));
+            return;
+        }
+        var selection = geographicCatalogs.requireSelection(countryId, departmentId, cityId);
+        user.setCountry(selection.country());
+        user.setDepartment(selection.department());
+        user.setCity(selection.city());
+        user.setHomeCity(selection.city().getName());
     }
 
     public void markPendingWhenEvidenceChanges(User user, String previousDocument, String newDocument) {

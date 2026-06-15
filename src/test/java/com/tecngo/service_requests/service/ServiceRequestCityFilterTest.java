@@ -1,0 +1,78 @@
+package com.tecngo.service_requests.service;
+
+import com.tecngo.catalogs.entity.City;
+import com.tecngo.service_requests.entity.RequestStatus;
+import com.tecngo.service_requests.entity.ServiceRequest;
+import com.tecngo.service_requests.repository.ServiceRequestRepository;
+import com.tecngo.services.entity.ServiceCategory;
+import com.tecngo.technicians.entity.TechnicianProfile;
+import com.tecngo.users.entity.Role;
+import com.tecngo.users.entity.User;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class ServiceRequestCityFilterTest {
+    @Mock ServiceRequestRepository requests;
+    @Mock com.tecngo.service_requests.repository.ServiceQuoteRepository quotes;
+    @Mock com.tecngo.service_requests.repository.ServiceRequestImageRepository images;
+    @Mock com.tecngo.services.service.ServiceCategoryService categories;
+    @Mock com.tecngo.technicians.service.TechnicianProfileService technicianProfiles;
+    @Mock com.tecngo.technicians.repository.TechnicianProfileRepository technicianProfileRepository;
+    @Mock com.tecngo.geolocation.HaversineDistance distance;
+    @Mock org.springframework.context.ApplicationEventPublisher events;
+    @Mock com.tecngo.verification.service.EmailVerificationService emailVerification;
+    @Mock com.tecngo.system_parameters.service.SystemParameterService parameters;
+    @Mock com.tecngo.technician_location.repository.TechnicianLocationRepository technicianLocations;
+    @Mock com.tecngo.users.service.UserAccessService userAccess;
+    @Mock com.tecngo.legal.service.LegalService legal;
+    @Mock com.tecngo.catalogs.service.GeographicCatalogService geographicCatalogs;
+    @InjectMocks ServiceRequestService service;
+
+    @Test
+    void availableRequestsAreFilteredByTechnicianCityAndSortedByDistance() {
+        City city = City.builder().id(UUID.randomUUID()).name("Villavicencio").build();
+        City otherCity = City.builder().id(UUID.randomUUID()).name("Bogotá").build();
+        ServiceCategory category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").build();
+        User technician = User.builder().id(UUID.randomUUID()).role(Role.TECHNICIAN).city(city).build();
+        TechnicianProfile profile = TechnicianProfile.builder().user(technician).latitude(4.1).longitude(-73.6)
+                .categories(Set.of(category)).available(false).build();
+        User client = User.builder().id(UUID.randomUUID()).fullName("Cliente")
+                .averageRating(new BigDecimal("5.00")).build();
+        ServiceRequest farther = request(category, city, client, 4.12, -73.62);
+        ServiceRequest other = request(category, otherCity, client, 4.10, -73.60);
+        ServiceRequest nearby = request(category, city, client, 4.11, -73.61);
+        when(technicianProfiles.approvedProfile(technician)).thenReturn(profile);
+        when(technicianLocations.findByTechnicianId(technician.getId())).thenReturn(java.util.Optional.empty());
+        when(requests.findAvailable(RequestStatus.QUOTE_PENDING, List.of(category.getId())))
+                .thenReturn(List.of(farther, other, nearby));
+        when(distance.kilometers(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .thenReturn(8.0, 2.0);
+        when(images.findByServiceRequestIdOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of());
+
+        var result = service.available(technician, 10);
+
+        assertThat(result).extracting("id").containsExactly(nearby.getId(), farther.getId());
+    }
+
+    private ServiceRequest request(ServiceCategory category, City city, User client,
+                                   double latitude, double longitude) {
+        return ServiceRequest.builder().id(UUID.randomUUID()).client(client).category(category).city(city)
+                .description("Trabajo").address("Zona, ciudad").latitude(latitude).longitude(longitude)
+                .status(RequestStatus.QUOTE_PENDING).createdAt(Instant.now()).build();
+    }
+}

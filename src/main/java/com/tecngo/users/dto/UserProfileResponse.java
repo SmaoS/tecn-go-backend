@@ -16,5 +16,6 @@ public record UserProfileResponse(
         boolean documentsVerified, String homeAddress, Double homeLatitude, Double homeLongitude,
         String homeCity, String homeNeighborhood, AccountStatus accountStatus,
         InactivationReason inactiveReason, String inactiveComment,
-        boolean profilePhotoFaceValidated
+        boolean profilePhotoFaceValidated, UUID countryId, String countryName,
+        UUID departmentId, String departmentName, UUID cityId, String cityName
 ) {}
