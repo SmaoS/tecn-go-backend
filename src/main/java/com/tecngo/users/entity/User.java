@@ -149,6 +149,9 @@ public class User implements UserDetails {
     private String profilePhotoPublicId;
     @Column(nullable = false)
     private boolean profilePhotoFaceValidated;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 40)
+    private FaceDetectionStatus faceDetectionStatus;
     @Column(nullable = false)
     private boolean onboardingCompleted;
     @Enumerated(EnumType.STRING)
@@ -160,6 +163,10 @@ public class User implements UserDetails {
     @JoinColumn(name = "profile_photo_verified_by_user_id")
     private User profilePhotoVerifiedBy;
     private Instant profilePhotoVerifiedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 40)
+    private IdentityDocumentCaptureStatus identityDocumentCaptureStatus;
 
     @PrePersist
     void onCreate() {

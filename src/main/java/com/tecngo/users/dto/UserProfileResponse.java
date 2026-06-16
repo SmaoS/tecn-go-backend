@@ -4,6 +4,8 @@ import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.entity.AccountStatus;
 import com.tecngo.users.entity.DocumentType;
+import com.tecngo.users.entity.FaceDetectionStatus;
+import com.tecngo.users.entity.IdentityDocumentCaptureStatus;
 import com.tecngo.users.entity.InactivationReason;
 import com.tecngo.users.entity.OnboardingStep;
 
@@ -22,5 +24,7 @@ public record UserProfileResponse(
         UUID departmentId, String departmentName, UUID cityId, String cityName
         , boolean onboardingCompleted, OnboardingStep onboardingStep, boolean profileSelfieLocked,
         DocumentType documentType, String documentNumber, String documentFrontUrl,
-        String documentBackUrl, String documentSingleUrl
+        String documentBackUrl, String documentSingleUrl,
+        FaceDetectionStatus faceDetectionStatus,
+        IdentityDocumentCaptureStatus identityDocumentCaptureStatus
 ) {}

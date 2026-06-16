@@ -134,7 +134,8 @@ public class UserService {
                 user.getCity() == null ? null : user.getCity().getName(),
                 user.isOnboardingCompleted(), user.getOnboardingStep(), user.isProfileSelfieLocked(),
                 user.getDocumentType(), user.getDocumentNumber(), user.getDocumentFrontUrl(),
-                user.getDocumentBackUrl(), user.getDocumentSingleUrl());
+                user.getDocumentBackUrl(), user.getDocumentSingleUrl(),
+                user.getFaceDetectionStatus(), user.getIdentityDocumentCaptureStatus());
     }
 
     private void applyGeographicSelection(User user, java.util.UUID countryId,

@@ -46,9 +46,11 @@ public class LegalService {
     @Transactional(readOnly = true)
     public LegalStatusResponse status(User user) {
         List<LegalDocumentResponse> all = active(user);
-        return new LegalStatusResponse(all.stream().allMatch(LegalDocumentResponse::accepted),
+        boolean complete = all.stream().allMatch(LegalDocumentResponse::accepted);
+        return new LegalStatusResponse(complete,
                 all.stream().filter(item -> !item.accepted()).toList(),
-                all.stream().filter(LegalDocumentResponse::accepted).toList());
+                all.stream().filter(LegalDocumentResponse::accepted).toList(),
+                complete, !complete);
     }
     @Transactional(readOnly = true)
     public void requireAccepted(User user) {

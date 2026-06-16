@@ -8,5 +8,6 @@ public record OnboardingStatusResponse(
         boolean emailVerified,
         boolean onboardingCompleted,
         OnboardingStep currentStep,
-        List<OnboardingStep> requiredSteps
+        List<OnboardingStep> requiredSteps,
+        String nextScreen
 ) {}

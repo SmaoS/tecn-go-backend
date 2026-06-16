@@ -29,7 +29,7 @@ public class OnboardingService {
     public OnboardingStatusResponse status(User user) {
         OnboardingStep current = currentStep(user);
         return new OnboardingStatusResponse(user.isEmailVerified(), user.isOnboardingCompleted(),
-                current, requiredSteps(user));
+                current, requiredSteps(user), user.isOnboardingCompleted() ? "HOME" : null);
     }
 
     @Transactional
@@ -69,7 +69,10 @@ public class OnboardingService {
         String url = managedContent.validateChange(null, request.profilePhotoUrl(), user, Set.of(ContentAssetKind.PROFILE));
         user.setProfilePhotoUrl(url);
         user.setProfileSelfieLocked(true);
-        user.setProfilePhotoFaceValidated(false);
+        FaceDetectionStatus detectionStatus = request.faceDetectionStatus() == null
+                ? FaceDetectionStatus.MANUAL_REVIEW_REQUIRED : request.faceDetectionStatus();
+        user.setFaceDetectionStatus(detectionStatus);
+        user.setProfilePhotoFaceValidated(detectionStatus == FaceDetectionStatus.AUTO_VALIDATED);
         user.setOnboardingStep(OnboardingStep.IDENTITY_DOCUMENT);
         users.save(user);
         return status(user);
@@ -102,10 +105,15 @@ public class OnboardingService {
             user.setDocumentPhotoUrl(single);
         }
         user.setDocumentType(request.documentType());
+        user.setIdentityDocumentCaptureStatus(request.identityDocumentCaptureStatus() == null
+                ? IdentityDocumentCaptureStatus.MANUAL_REVIEW_REQUIRED : request.identityDocumentCaptureStatus());
         user.setDocumentsVerified(false);
         user.setVerificationStatus(VerificationStatus.PENDING_VERIFICATION);
-        user.setOnboardingStep(user.getRole() == Role.TECHNICIAN
-                ? OnboardingStep.TECHNICIAN_CERTIFICATE : OnboardingStep.COMPLETED);
+        if (user.getRole() == Role.TECHNICIAN) {
+            user.setOnboardingStep(OnboardingStep.TECHNICIAN_CERTIFICATE);
+        } else {
+            markCompleted(user);
+        }
         users.save(user);
         return status(user);
     }
@@ -117,7 +125,7 @@ public class OnboardingService {
             user.setCertificatePhotoUrl(managedContent.validateChange(user.getCertificatePhotoUrl(),
                     request.certificateUrl(), user, Set.of(ContentAssetKind.CERTIFICATE)));
         }
-        user.setOnboardingStep(OnboardingStep.COMPLETED);
+        markCompleted(user);
         users.save(user);
         return status(user);
     }
@@ -125,7 +133,7 @@ public class OnboardingService {
     @Transactional
     public OnboardingStatusResponse skipCertificate(User user) {
         requireTechnician(user);
-        user.setOnboardingStep(OnboardingStep.COMPLETED);
+        markCompleted(user);
         users.save(user);
         return status(user);
     }
@@ -139,6 +147,17 @@ public class OnboardingService {
         }
         user.setOnboardingCompleted(true);
         user.setOnboardingStep(OnboardingStep.COMPLETED);
+        users.save(user);
+        return status(user);
+    }
+
+    @Transactional
+    public OnboardingStatusResponse autoComplete(User user) {
+        requireEmail(user);
+        if (currentStep(user) != OnboardingStep.COMPLETED) {
+            throw new ConflictException("Onboarding step " + currentStep(user) + " is pending");
+        }
+        markCompleted(user);
         users.save(user);
         return status(user);
     }
@@ -166,8 +185,12 @@ public class OnboardingService {
         List<OnboardingStep> steps = new ArrayList<>(List.of(OnboardingStep.MAIN_DATA,
                 OnboardingStep.LEGAL_ACCEPTANCE, OnboardingStep.PROFILE_SELFIE, OnboardingStep.IDENTITY_DOCUMENT));
         if (user.getRole() == Role.TECHNICIAN) steps.add(OnboardingStep.TECHNICIAN_CERTIFICATE);
-        steps.add(OnboardingStep.COMPLETED);
         return steps;
+    }
+
+    private void markCompleted(User user) {
+        user.setOnboardingCompleted(true);
+        user.setOnboardingStep(OnboardingStep.COMPLETED);
     }
 
     private void requireEmail(User user) {

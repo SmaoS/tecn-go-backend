@@ -46,6 +46,11 @@ public class OnboardingController {
         return service.complete(user);
     }
 
+    @PostMapping("/v1/users/me/onboarding/auto-complete")
+    public OnboardingStatusResponse autoComplete(@AuthenticationPrincipal User user) {
+        return service.autoComplete(user);
+    }
+
     @PostMapping("/v1/technicians/me/onboarding/certificate")
     public OnboardingStatusResponse certificate(@AuthenticationPrincipal User user,
                                                 @RequestBody CertificateRequest request) {
