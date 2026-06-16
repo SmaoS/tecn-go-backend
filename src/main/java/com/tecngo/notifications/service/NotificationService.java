@@ -39,11 +39,17 @@ public class NotificationService {
     public NotificationResponse markRead(UUID id, User user) {
         Notification notification = notifications.findById(id)
                 .orElseThrow(() -> new NotFoundException("Notification not found"));
-        if (!notification.getUser().getId().equals(user.getId())) {
-            throw new ForbiddenException("Notification belongs to another user");
-        }
+        ensureOwner(notification, user);
         notification.setRead(true);
         return map(notification);
+    }
+
+    @Transactional
+    public void delete(UUID id, User user) {
+        Notification notification = notifications.findById(id)
+                .orElseThrow(() -> new NotFoundException("Notification not found"));
+        ensureOwner(notification, user);
+        notifications.delete(notification);
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -73,6 +79,12 @@ public class NotificationService {
             return UUID.fromString(value);
         } catch (IllegalArgumentException ignored) {
             return null;
+        }
+    }
+
+    private void ensureOwner(Notification notification, User user) {
+        if (!notification.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("Notification belongs to another user");
         }
     }
 }

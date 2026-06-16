@@ -5,6 +5,7 @@ import com.tecngo.notifications.dto.UnreadCountResponse;
 import com.tecngo.notifications.service.NotificationService;
 import com.tecngo.users.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,5 +31,11 @@ public class NotificationController {
     @PutMapping("/{id}/read")
     public NotificationResponse markRead(@PathVariable UUID id, @AuthenticationPrincipal User user) {
         return service.markRead(id, user);
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID id, @AuthenticationPrincipal User user) {
+        service.delete(id, user);
     }
 }
