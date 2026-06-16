@@ -18,6 +18,7 @@ import com.tecngo.users.repository.UserRepository;
 import com.tecngo.system_parameters.service.SystemParameterService;
 import com.tecngo.users.service.UserAccessService;
 import com.tecngo.legal.service.LegalService;
+import com.tecngo.technician_wallet.service.TechnicianWalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +40,7 @@ public class PaymentService {
     private final UserAccessService userAccess;
     private final LegalService legal;
     private final ReferralService referrals;
+    private final TechnicianWalletService wallets;
 
     @Transactional
     public PaymentResponse payCash(UUID requestId, User client) {
@@ -80,6 +82,7 @@ public class PaymentService {
                 .status(PaymentStatus.PAID)
                 .method(PaymentMethod.CASH)
                 .build());
+        payment.setTechnicianWalletTransactionId(wallets.debitCommissionIfEnabled(payment));
         request.setStatus(RequestStatus.PAID);
         client.setPaidServicesCount(client.getPaidServicesCount() + 1);
         request.getTechnician().setPaidServicesCount(request.getTechnician().getPaidServicesCount() + 1);

@@ -40,7 +40,7 @@ app:
     password: ${ADMIN_PASSWORD:Admin123!}
     sync-password: ${ADMIN_SYNC_PASSWORD:false}
   payments:
-    platform-fee-percentage: ${PLATFORM_FEE_PERCENTAGE:10}
+    platform-fee-percentage: ${PLATFORM_FEE_PERCENTAGE:0}
   files:
     max-size-bytes: ${FILE_MAX_SIZE_BYTES:5242880}
   image-moderation:
@@ -71,7 +71,7 @@ app:
     new-request-radius-km: ${NEW_REQUEST_NOTIFICATION_RADIUS_KM:25}
   parameters:
     quote-expiration-minutes: ${QUOTE_EXPIRATION_MINUTES:10}
-    platform-commission-percentage: ${PLATFORM_COMMISSION_PERCENTAGE:10}
+    platform-commission-percentage: ${PLATFORM_COMMISSION_PERCENTAGE:0}
     technician-offline-after-minutes: ${TECHNICIAN_OFFLINE_AFTER_MINUTES:3}
     location-polling-seconds: ${LOCATION_POLLING_SECONDS:10}
     service-polling-seconds: ${SERVICE_POLLING_SECONDS:10}
@@ -85,6 +85,20 @@ app:
     referral-reward-expiration-days: ${REFERRAL_REWARD_EXPIRATION_DAYS:0}
     referral-reward-only-if-commission-gt-zero: ${REFERRAL_REWARD_ONLY_IF_COMMISSION_GT_ZERO:true}
     app-version-check-enabled: ${APP_VERSION_CHECK_ENABLED:true}
+    technician-recharge-enabled: ${TECHNICIAN_RECHARGE_ENABLED:false}
+    technician-block-when-negative-balance: ${TECHNICIAN_BLOCK_WHEN_NEGATIVE_BALANCE:true}
+    technician-low-balance-warning-enabled: ${TECHNICIAN_LOW_BALANCE_WARNING_ENABLED:false}
+    technician-low-balance-minimum: ${TECHNICIAN_LOW_BALANCE_MINIMUM:10000}
+    technician-min-recharge-amount: ${TECHNICIAN_MIN_RECHARGE_AMOUNT:10000}
+    technician-max-recharge-amount: ${TECHNICIAN_MAX_RECHARGE_AMOUNT:500000}
+  wompi:
+    public-key: ${WOMPI_PUBLIC_KEY:}
+    private-key: ${WOMPI_PRIVATE_KEY:}
+    events-secret: ${WOMPI_EVENTS_SECRET:}
+    integrity-secret: ${WOMPI_INTEGRITY_SECRET:${WOMPI_EVENTS_SECRET:}}
+    env: ${WOMPI_ENV:sandbox}
+    frontend-url: ${FRONTEND_URL:http://localhost:5173}
+    mobile-deep-link: ${MOBILE_DEEP_LINK:tecngo://payment-result}
 
 info:
   app:

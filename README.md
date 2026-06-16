@@ -210,7 +210,15 @@ cotizaciones concurrentemente.
 
 El MVP registra pagos en efectivo cuando el servicio está `COMPLETED`. La comisión se
 lee de `PLATFORM_COMMISSION_PERCENTAGE` y el porcentaje aplicado se guarda en cada pago
-para preservar el histórico.
+para preservar el histórico. La comisión inicial es `0`; cuando se active el modelo de
+comisión, los descuentos se registran también en la cartera del técnico.
+
+La migración `V28` crea carteras para técnicos, movimientos de saldo y recargas Wompi.
+Por defecto `TECHNICIAN_RECHARGE_ENABLED=false`, por lo que el sistema queda preparado
+sin exigir recargas todavía. Para activar recargas configurar `WOMPI_PUBLIC_KEY`,
+`WOMPI_PRIVATE_KEY`, `WOMPI_EVENTS_SECRET`, `WOMPI_INTEGRITY_SECRET` y
+`TECHNICIAN_RECHARGE_ENABLED=true`. El webhook público es `POST /api/webhooks/wompi` y
+valida el checksum antes de aprobar o rechazar recargas.
 
 Solo el cliente propietario puede calificar una solicitud pagada y puede hacerlo una
 sola vez. El técnico también puede calificar al cliente una vez después del pago. El

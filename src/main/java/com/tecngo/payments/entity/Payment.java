@@ -64,6 +64,9 @@ public class Payment {
     @JoinColumn(name = "referral_reward_id")
     private ReferralReward referralReward;
 
+    @Column(name = "technician_wallet_transaction_id")
+    private UUID technicianWalletTransactionId;
+
     @Column(nullable = false)
     private Instant createdAt;
 

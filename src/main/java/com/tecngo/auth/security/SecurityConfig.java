@@ -41,7 +41,7 @@ public class SecurityConfig {
                                 "/v1/services/**", "/v1/service-categories/**", "/swagger-ui/**",
                                 "/v1/catalogs/**",
                                 "/swagger-ui.html", "/v3/api-docs/**", "/actuator/health", "/actuator/info",
-                                "/version", "/error").permitAll()
+                                "/version", "/error", "/webhooks/wompi").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/referrals/validate/**",
                                 "/v1/app-version/check", "/v1/legal/documents/active",
                                 "/v1/legal/documents/public").permitAll()

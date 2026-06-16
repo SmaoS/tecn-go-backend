@@ -162,8 +162,8 @@ class Phase5FlowIntegrationTest {
                         .header("Authorization", bearer(client)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.amount").value(150000))
-                .andExpect(jsonPath("$.platformFee").value(15000))
-                .andExpect(jsonPath("$.technicianAmount").value(135000))
+                .andExpect(jsonPath("$.platformFee").value(0))
+                .andExpect(jsonPath("$.technicianAmount").value(150000))
                 .andExpect(jsonPath("$.paymentStatus").value("PAID"))
                 .andExpect(jsonPath("$.paymentMethod").value("CASH"));
 
@@ -173,15 +173,15 @@ class Phase5FlowIntegrationTest {
                 .andExpect(jsonPath("$[0].serviceRequestId").value(requestId));
 
         mvc.perform(get("/v1/technicians/me/earnings")
-                        .header("Authorization", bearer(technician)))
+                .header("Authorization", bearer(technician)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalTechnicianAmount").value(135000))
+                .andExpect(jsonPath("$.totalTechnicianAmount").value(150000))
                 .andExpect(jsonPath("$.paymentCount").value(1));
 
         mvc.perform(get("/v1/admin/payments")
-                        .header("Authorization", bearer(admin)))
+                .header("Authorization", bearer(admin)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalPlatformFee").value(15000));
+                .andExpect(jsonPath("$.totalPlatformFee").value(0));
 
         mvc.perform(post("/v1/service-requests/{id}/ratings", requestId)
                         .header("Authorization", bearer(client))

@@ -41,6 +41,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import com.tecngo.system_parameters.service.SystemParameterService;
+import com.tecngo.technician_wallet.service.TechnicianWalletService;
 import com.tecngo.technician_location.repository.TechnicianLocationRepository;
 import com.tecngo.content_moderation.entity.ModerationStatus;
 
@@ -83,6 +84,7 @@ public class ServiceRequestService {
     private final PlatformFeeCalculator feeCalculator;
     private final ReferralService referrals;
     private final UserReportRepository reports;
+    private final TechnicianWalletService wallets;
     @Value("${app.notifications.new-request-radius-km:25}")
     private double newRequestRadiusKm;
 
@@ -201,6 +203,7 @@ public class ServiceRequestService {
         requireCriticalAccess(technician);
         emailVerification.requireVerified(technician);
         var profile = technicianProfiles.approvedProfile(technician);
+        wallets.requireCanQuote(technician);
         ServiceRequest request = requests.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Service request not found"));
         if (request.getStatus() != RequestStatus.QUOTE_PENDING) {
@@ -406,7 +409,7 @@ public class ServiceRequestService {
         ReferralReward reward = referrals.useAvailableReward(request.getTechnician(), request, percentage);
         boolean commissionWaived = reward != null;
         BigDecimal effectivePercentage = commissionWaived ? BigDecimal.ZERO : percentage;
-        payments.save(Payment.builder()
+        Payment payment = payments.save(Payment.builder()
                 .serviceRequest(request)
                 .client(request.getClient())
                 .technician(request.getTechnician())
@@ -420,6 +423,7 @@ public class ServiceRequestService {
                 .status(PaymentStatus.PAID)
                 .method(method == null ? PaymentMethod.CASH : method)
                 .build());
+        payment.setTechnicianWalletTransactionId(wallets.debitCommissionIfEnabled(payment));
     }
 
     private void notifyNearbyTechnicians(ServiceRequest request) {

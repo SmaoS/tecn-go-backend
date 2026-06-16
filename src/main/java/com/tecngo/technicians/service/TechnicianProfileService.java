@@ -19,6 +19,7 @@ import com.tecngo.users.repository.UserRepository;
 import com.tecngo.users.service.UserService;
 import com.tecngo.verification.service.EmailVerificationService;
 import com.tecngo.referrals.service.ReferralService;
+import com.tecngo.technician_wallet.service.TechnicianWalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +40,7 @@ public class TechnicianProfileService {
     private final ReferralService referrals;
     private final ManagedContentPolicy managedContent;
     private final GeographicCatalogService geographicCatalogs;
+    private final TechnicianWalletService wallets;
 
     @Transactional
     public TechnicianProfileResponse create(TechnicianProfileRequest request, User user) {
@@ -56,6 +58,7 @@ public class TechnicianProfileService {
                 .latitude(request.latitude())
                 .longitude(request.longitude())
                 .build());
+        wallets.ensureWallet(user);
         referrals.ensureCode(user);
         return map(saved);
     }
@@ -110,7 +113,10 @@ public class TechnicianProfileService {
             throw new IllegalStateException("User identity must be verified first");
         }
         profile.setStatus(status);
-        if (status == TechnicianStatus.APPROVED) referrals.ensureCode(profile.getUser());
+        if (status == TechnicianStatus.APPROVED) {
+            referrals.ensureCode(profile.getUser());
+            wallets.ensureWallet(profile.getUser());
+        }
         return map(profile);
     }
 

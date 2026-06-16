@@ -31,12 +31,18 @@ public class SystemParameterService {
     public static final String REFERRAL_REWARD_EXPIRATION_DAYS = "REFERRAL_REWARD_EXPIRATION_DAYS";
     public static final String REFERRAL_REWARD_ONLY_IF_COMMISSION_GT_ZERO = "REFERRAL_REWARD_ONLY_IF_COMMISSION_GT_ZERO";
     public static final String APP_VERSION_CHECK_ENABLED = "APP_VERSION_CHECK_ENABLED";
+    public static final String TECHNICIAN_RECHARGE_ENABLED = "TECHNICIAN_RECHARGE_ENABLED";
+    public static final String TECHNICIAN_BLOCK_WHEN_NEGATIVE_BALANCE = "TECHNICIAN_BLOCK_WHEN_NEGATIVE_BALANCE";
+    public static final String TECHNICIAN_LOW_BALANCE_WARNING_ENABLED = "TECHNICIAN_LOW_BALANCE_WARNING_ENABLED";
+    public static final String TECHNICIAN_LOW_BALANCE_MINIMUM = "TECHNICIAN_LOW_BALANCE_MINIMUM";
+    public static final String TECHNICIAN_MIN_RECHARGE_AMOUNT = "TECHNICIAN_MIN_RECHARGE_AMOUNT";
+    public static final String TECHNICIAN_MAX_RECHARGE_AMOUNT = "TECHNICIAN_MAX_RECHARGE_AMOUNT";
 
     private final SystemParameterRepository repository;
 
     @Value("${app.parameters.quote-expiration-minutes:10}")
     private int quoteExpirationFallback;
-    @Value("${app.parameters.platform-commission-percentage:10}")
+    @Value("${app.parameters.platform-commission-percentage:0}")
     private BigDecimal commissionFallback;
     @Value("${app.parameters.technician-offline-after-minutes:3}")
     private int offlineFallback;
@@ -100,6 +106,12 @@ public class SystemParameterService {
         return bool(REFERRAL_REWARD_ONLY_IF_COMMISSION_GT_ZERO, true);
     }
     public boolean appVersionCheckEnabled() { return bool(APP_VERSION_CHECK_ENABLED, true); }
+    public boolean technicianRechargeEnabled() { return bool(TECHNICIAN_RECHARGE_ENABLED, false); }
+    public boolean technicianBlockWhenNegativeBalance() { return bool(TECHNICIAN_BLOCK_WHEN_NEGATIVE_BALANCE, true); }
+    public boolean technicianLowBalanceWarningEnabled() { return bool(TECHNICIAN_LOW_BALANCE_WARNING_ENABLED, false); }
+    public BigDecimal technicianLowBalanceMinimum() { return decimal(TECHNICIAN_LOW_BALANCE_MINIMUM, BigDecimal.valueOf(10000)); }
+    public BigDecimal technicianMinRechargeAmount() { return decimal(TECHNICIAN_MIN_RECHARGE_AMOUNT, BigDecimal.valueOf(10000)); }
+    public BigDecimal technicianMaxRechargeAmount() { return decimal(TECHNICIAN_MAX_RECHARGE_AMOUNT, BigDecimal.valueOf(500000)); }
 
     private boolean bool(String key, boolean fallback) {
         return repository.findByKeyAndActiveTrue(key)
@@ -148,6 +160,14 @@ public class SystemParameterService {
                 && (number.compareTo(BigDecimal.ZERO) < 0
                 || number.compareTo(BigDecimal.valueOf(50)) > 0)) {
             throw new IllegalArgumentException("PLATFORM_COMMISSION_PERCENTAGE must be between 0 and 50");
+        }
+        if (parameter.getKey().equals(TECHNICIAN_MIN_RECHARGE_AMOUNT)
+                && number.compareTo(technicianMaxRechargeAmount()) > 0) {
+            throw new IllegalArgumentException("TECHNICIAN_MIN_RECHARGE_AMOUNT cannot be greater than maximum");
+        }
+        if (parameter.getKey().equals(TECHNICIAN_MAX_RECHARGE_AMOUNT)
+                && number.compareTo(technicianMinRechargeAmount()) < 0) {
+            throw new IllegalArgumentException("TECHNICIAN_MAX_RECHARGE_AMOUNT cannot be lower than minimum");
         }
     }
 
