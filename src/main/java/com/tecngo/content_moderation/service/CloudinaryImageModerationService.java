@@ -46,7 +46,8 @@ public class CloudinaryImageModerationService implements ImageModerationService 
             };
         } catch (Exception exception) {
             log.warn("Cloudinary moderation unavailable for {}: {}", publicId, exception.getMessage());
-            return flagged("Automatic moderation unavailable; manual review is required");
+            return new ModerationResult(ModerationStatus.PENDING_REVIEW,
+                    "Automatic moderation unavailable; manual review is required");
         }
     }
 

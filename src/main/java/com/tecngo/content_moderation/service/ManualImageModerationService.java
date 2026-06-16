@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 public class ManualImageModerationService implements ImageModerationService {
     @Override
     public ModerationResult moderate(String publicId) {
-        return new ModerationResult(ModerationStatus.FLAGGED,
+        return new ModerationResult(ModerationStatus.PENDING_REVIEW,
                 "Automatic moderation is not configured; manual review is required");
     }
 }

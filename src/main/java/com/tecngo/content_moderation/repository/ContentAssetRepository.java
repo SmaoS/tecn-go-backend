@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public interface ContentAssetRepository extends JpaRepository<ContentAsset, UUID> {
     Optional<ContentAsset> findByFileUrl(String fileUrl);
+    Optional<ContentAsset> findByFileUrlAndUploadedById(String fileUrl, UUID uploadedById);
     List<ContentAsset> findByModerationStatusOrderByCreatedAtAsc(ModerationStatus status);
     List<ContentAsset> findAllByOrderByCreatedAtDesc();
 }

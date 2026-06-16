@@ -1,5 +1,7 @@
 package com.tecngo.users.service;
 
+import com.tecngo.content_moderation.entity.ModerationStatus;
+import com.tecngo.content_moderation.repository.ContentAssetRepository;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.shared.exception.NotFoundException;
 import com.tecngo.users.dto.UserVerificationResponse;
@@ -18,6 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class VerificationService {
     private final UserRepository users;
+    private final ContentAssetRepository contentAssets;
 
     @Transactional(readOnly = true)
     public List<UserVerificationResponse> pending() {
@@ -68,6 +71,14 @@ public class VerificationService {
         user.setProfilePhotoFaceValidated(true);
         user.setProfilePhotoVerifiedBy(reviewer);
         user.setProfilePhotoVerifiedAt(Instant.now());
+        contentAssets.findByFileUrlAndUploadedById(user.getProfilePhotoUrl(), user.getId())
+                .filter(asset -> asset.getModerationStatus() != ModerationStatus.REJECTED)
+                .ifPresent(asset -> {
+                    asset.setModerationStatus(ModerationStatus.APPROVED);
+                    asset.setModerationReason("Profile photo approved by verifier");
+                    asset.setModeratedAt(Instant.now());
+                    asset.setModeratedBy(reviewer);
+                });
         return map(users.save(user));
     }
 

@@ -79,11 +79,16 @@ public class ContentModerationService {
     private boolean canView(ContentAsset asset, User viewer, boolean enforceStatus) {
         if (viewer == null) return false;
         boolean reviewer = viewer.getRole() == Role.ADMIN || viewer.getRole() == Role.VERIFIER;
-        if (enforceStatus && asset.getModerationStatus() != ModerationStatus.APPROVED && !reviewer) return false;
+        if (enforceStatus && asset.getModerationStatus() == ModerationStatus.REJECTED && !reviewer) return false;
         if (reviewer) return true;
-        if (asset.getUploadedBy().getId().equals(viewer.getId())
-                && asset.getModerationStatus() == ModerationStatus.APPROVED) return true;
-        if (asset.getKind() == ContentAssetKind.PROFILE) return asset.getModerationStatus() == ModerationStatus.APPROVED;
+        if (asset.getKind() == ContentAssetKind.PROFILE) {
+            if (asset.getUploadedBy().getId().equals(viewer.getId())) return true;
+            return asset.getModerationStatus() == ModerationStatus.APPROVED
+                    || asset.getUploadedBy().isProfilePhotoFaceValidated()
+                    && asset.getFileUrl().equals(asset.getUploadedBy().getProfilePhotoUrl());
+        }
+        if (enforceStatus && asset.getModerationStatus() != ModerationStatus.APPROVED) return false;
+        if (asset.getUploadedBy().getId().equals(viewer.getId())) return true;
         if (asset.getKind() == ContentAssetKind.DOCUMENT || asset.getKind() == ContentAssetKind.CERTIFICATE) return false;
 
         var image = requestImages.findByContentAssetId(asset.getId()).orElse(null);
