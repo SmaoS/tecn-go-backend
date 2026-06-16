@@ -56,6 +56,10 @@ public class UserService {
         String newDocument = managedContent.validateChange(previousDocument,
                 request.documentPhotoUrl(), user, Set.of(ContentAssetKind.DOCUMENT));
         String previousProfilePhoto = clean(user.getProfilePhotoUrl());
+        if (user.isProfileSelfieLocked()
+                && !java.util.Objects.equals(previousProfilePhoto, clean(request.profilePhotoUrl()))) {
+            throw new IllegalArgumentException("Profile selfie cannot be changed by the user");
+        }
         String newProfilePhoto = managedContent.validateChange(previousProfilePhoto,
                 request.profilePhotoUrl(), user, Set.of(ContentAssetKind.PROFILE));
         String newCertificate = managedContent.validateChange(user.getCertificatePhotoUrl(),
@@ -120,7 +124,10 @@ public class UserService {
                 user.getDepartment() == null ? null : user.getDepartment().getId(),
                 user.getDepartment() == null ? null : user.getDepartment().getName(),
                 user.getCity() == null ? null : user.getCity().getId(),
-                user.getCity() == null ? null : user.getCity().getName());
+                user.getCity() == null ? null : user.getCity().getName(),
+                user.isOnboardingCompleted(), user.getOnboardingStep(), user.isProfileSelfieLocked(),
+                user.getDocumentType(), user.getDocumentNumber(), user.getDocumentFrontUrl(),
+                user.getDocumentBackUrl(), user.getDocumentSingleUrl());
     }
 
     private void applyGeographicSelection(User user, java.util.UUID countryId,

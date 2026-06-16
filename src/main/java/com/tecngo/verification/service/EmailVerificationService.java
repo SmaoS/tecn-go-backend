@@ -1,5 +1,6 @@
 package com.tecngo.verification.service;
 
+import com.tecngo.shared.exception.CodedForbiddenException;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.shared.exception.NotFoundException;
 import com.tecngo.users.entity.User;
@@ -70,7 +71,8 @@ public class EmailVerificationService {
 
     public void requireVerified(User user) {
         if (requireVerification && !user.isEmailVerified()) {
-            throw new ConflictException("Verify your email before continuing");
+            throw new CodedForbiddenException("EMAIL_NOT_VERIFIED",
+                    "Debes confirmar tu correo electrónico para continuar.");
         }
     }
 

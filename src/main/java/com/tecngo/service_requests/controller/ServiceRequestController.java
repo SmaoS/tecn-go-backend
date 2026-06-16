@@ -112,4 +112,13 @@ public class ServiceRequestController {
                                                @AuthenticationPrincipal User user) {
         return service.updateStatus(id, request.status(), user);
     }
+
+    @PostMapping("/{id}/technician-complete")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    public ServiceRequestResponse technicianComplete(@PathVariable java.util.UUID id,
+                                                     @Valid @RequestBody TechnicianCompleteRequest request,
+                                                     @AuthenticationPrincipal User user) {
+        return service.technicianComplete(id, request.paymentReceived(), request.paymentMethod(),
+                request.comment(), user);
+    }
 }

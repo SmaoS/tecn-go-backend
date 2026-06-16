@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Size;
+import com.tecngo.payments.entity.PaymentMethod;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -15,5 +16,6 @@ public record CreateServiceRequest(
         @NotNull Double latitude,
         @NotNull Double longitude,
         @DecimalMin("0.00") BigDecimal estimatedPrice,
-        UUID cityId
+        UUID cityId,
+        PaymentMethod paymentMethod
 ) {}

@@ -3,7 +3,9 @@ package com.tecngo.users.dto;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.entity.AccountStatus;
+import com.tecngo.users.entity.DocumentType;
 import com.tecngo.users.entity.InactivationReason;
+import com.tecngo.users.entity.OnboardingStep;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -18,4 +20,7 @@ public record UserProfileResponse(
         InactivationReason inactiveReason, String inactiveComment,
         boolean profilePhotoFaceValidated, UUID countryId, String countryName,
         UUID departmentId, String departmentName, UUID cityId, String cityName
+        , boolean onboardingCompleted, OnboardingStep onboardingStep, boolean profileSelfieLocked,
+        DocumentType documentType, String documentNumber, String documentFrontUrl,
+        String documentBackUrl, String documentSingleUrl
 ) {}

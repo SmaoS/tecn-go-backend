@@ -55,6 +55,14 @@ public class LegalService {
         if (!parameters.requireLegalAcceptance() || user.getRole() == Role.ADMIN || user.getRole() == Role.VERIFIER) return;
         if (!status(user).complete()) throw new ConflictException("Accept required legal documents before continuing");
     }
+    @Transactional
+    public void acceptAll(User user) {
+        applicable(user).forEach(document -> {
+            if (!acceptances.existsByUserIdAndLegalDocumentId(user.getId(), document.getId())) {
+                acceptances.save(LegalAcceptance.builder().user(user).legalDocument(document).build());
+            }
+        });
+    }
     @Transactional(readOnly = true)
     public List<LegalDocumentResponse> adminList(User admin) {
         requireAdmin(admin);

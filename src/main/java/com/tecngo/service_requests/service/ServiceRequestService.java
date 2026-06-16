@@ -13,6 +13,17 @@ import com.tecngo.services.service.ServiceCategoryService;
 import com.tecngo.geolocation.HaversineDistance;
 import com.tecngo.notifications.entity.NotificationType;
 import com.tecngo.notifications.event.UserNotificationEvent;
+import com.tecngo.payments.entity.Payment;
+import com.tecngo.payments.entity.PaymentMethod;
+import com.tecngo.payments.entity.PaymentStatus;
+import com.tecngo.payments.repository.PaymentRepository;
+import com.tecngo.payments.service.PlatformFeeCalculator;
+import com.tecngo.referrals.entity.ReferralReward;
+import com.tecngo.referrals.service.ReferralService;
+import com.tecngo.reports.entity.ReportReason;
+import com.tecngo.reports.entity.ReportSeverity;
+import com.tecngo.reports.entity.UserReport;
+import com.tecngo.reports.repository.UserReportRepository;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.shared.exception.ForbiddenException;
 import com.tecngo.shared.exception.NotFoundException;
@@ -53,7 +64,7 @@ public class ServiceRequestService {
             RequestStatus.QUOTE_ACCEPTED, RequestStatus.ON_THE_WAY, RequestStatus.ARRIVED,
             RequestStatus.IN_PROGRESS, RequestStatus.COMPLETED);
     private static final Set<RequestStatus> HISTORY_STATUSES = Set.of(
-            RequestStatus.PAID, RequestStatus.CANCELLED);
+            RequestStatus.PAID, RequestStatus.CANCELLED, RequestStatus.PAYMENT_DISPUTE);
     private final ServiceRequestRepository requests;
     private final ServiceQuoteRepository quotes;
     private final ServiceRequestImageRepository images;
@@ -68,6 +79,10 @@ public class ServiceRequestService {
     private final UserAccessService userAccess;
     private final LegalService legal;
     private final GeographicCatalogService geographicCatalogs;
+    private final PaymentRepository payments;
+    private final PlatformFeeCalculator feeCalculator;
+    private final ReferralService referrals;
+    private final UserReportRepository reports;
     @Value("${app.notifications.new-request-radius-km:25}")
     private double newRequestRadiusKm;
 
@@ -92,6 +107,7 @@ public class ServiceRequestService {
                 .latitude(request.latitude())
                 .longitude(request.longitude())
                 .estimatedPrice(request.estimatedPrice())
+                .requestedPaymentMethod(request.paymentMethod() == null ? PaymentMethod.CASH : request.paymentMethod())
                 .build());
         notifyNearbyTechnicians(saved);
         return map(saved);
@@ -330,6 +346,82 @@ public class ServiceRequestService {
         return map(request);
     }
 
+    @Transactional
+    public ServiceRequestResponse technicianComplete(UUID id, boolean paymentReceived,
+                                                     PaymentMethod paymentMethod, String comment,
+                                                     User technician) {
+        requireRole(technician, Role.TECHNICIAN);
+        requireCriticalAccess(technician);
+        ServiceRequest request = requests.findByIdForUpdate(id)
+                .orElseThrow(() -> new NotFoundException("Service request not found"));
+        requireAssignedTechnician(request, technician);
+        if (request.getStatus() == RequestStatus.PAID || request.getStatus() == RequestStatus.PAYMENT_DISPUTE
+                || request.getStatus() == RequestStatus.CANCELLED) {
+            throw new ConflictException("Service request is already closed");
+        }
+        if (!Set.of(RequestStatus.QUOTE_ACCEPTED, RequestStatus.ON_THE_WAY, RequestStatus.ARRIVED,
+                RequestStatus.IN_PROGRESS, RequestStatus.COMPLETED).contains(request.getStatus())) {
+            throw new ConflictException("Service request cannot be completed from current status");
+        }
+        if (request.getFinalPrice() == null || request.getFinalPrice().signum() <= 0) {
+            throw new ConflictException("Service request does not have a final price");
+        }
+        if (paymentReceived) {
+            createPaidPayment(request, paymentMethod == null ? request.getRequestedPaymentMethod() : paymentMethod);
+            request.setStatus(RequestStatus.PAID);
+            request.getClient().setCompletedServicesCount(request.getClient().getCompletedServicesCount() + 1);
+            request.getTechnician().setCompletedServicesCount(request.getTechnician().getCompletedServicesCount() + 1);
+            request.getClient().setPaidServicesCount(request.getClient().getPaidServicesCount() + 1);
+            request.getTechnician().setPaidServicesCount(request.getTechnician().getPaidServicesCount() + 1);
+            events.publishEvent(new UserNotificationEvent(request.getClient().getId(), "Servicio pagado",
+                    "El técnico confirmó el pago. Puedes calificar el servicio.",
+                    NotificationType.SERVICE_COMPLETED, requestData(request)));
+        } else {
+            request.setStatus(RequestStatus.PAYMENT_DISPUTE);
+            reports.save(UserReport.builder()
+                    .serviceRequest(request)
+                    .reporter(technician)
+                    .reported(request.getClient())
+                    .reporterRole(technician.getRole())
+                    .reportedRole(request.getClient().getRole())
+                    .reason(ReportReason.PAYMENT_ISSUE)
+                    .description(clean(comment) == null
+                            ? "El técnico reportó que el cliente no pagó el valor acordado."
+                            : clean(comment))
+                    .severity(ReportSeverity.HIGH)
+                    .build());
+            events.publishEvent(new UserNotificationEvent(request.getClient().getId(), "Pago reportado",
+                    "El técnico reportó un problema de pago en el servicio.",
+                    NotificationType.SERVICE_STATUS_CHANGED, requestData(request)));
+        }
+        return map(request);
+    }
+
+    private void createPaidPayment(ServiceRequest request, PaymentMethod method) {
+        if (payments.existsByServiceRequestId(request.getId())) {
+            throw new ConflictException("Service request is already paid");
+        }
+        BigDecimal amount = request.getFinalPrice();
+        BigDecimal percentage = parameters.platformCommissionPercentage();
+        ReferralReward reward = referrals.useAvailableReward(request.getTechnician(), request, percentage);
+        boolean commissionWaived = reward != null;
+        BigDecimal effectivePercentage = commissionWaived ? BigDecimal.ZERO : percentage;
+        payments.save(Payment.builder()
+                .serviceRequest(request)
+                .client(request.getClient())
+                .technician(request.getTechnician())
+                .amount(amount)
+                .platformFee(feeCalculator.fee(amount, effectivePercentage))
+                .platformCommissionPercentage(effectivePercentage)
+                .technicianAmount(feeCalculator.technicianAmount(amount, effectivePercentage))
+                .commissionWaived(commissionWaived)
+                .commissionWaivedReason(commissionWaived ? "REFERRAL_REWARD" : null)
+                .referralReward(reward)
+                .status(PaymentStatus.PAID)
+                .method(method == null ? PaymentMethod.CASH : method)
+                .build());
+    }
+
     private void notifyNearbyTechnicians(ServiceRequest request) {
         technicianProfileRepository.findByStatusOrderByCreatedAtAsc(TechnicianStatus.APPROVED).stream()
                 .filter(com.tecngo.technicians.entity.TechnicianProfile::isAvailable)
@@ -405,7 +497,8 @@ public class ServiceRequestService {
                 approximateLocation ? approximate(item.getAddress()) : item.getAddress(),
                 approximateLocation ? null : item.getLatitude(), approximateLocation ? null : item.getLongitude(),
                 distanceKm, item.getEstimatedPrice(),
-                item.getTechnicianPrice(), item.getFinalPrice(), item.getStatus(), item.getCreatedAt(),
+                item.getTechnicianPrice(), item.getFinalPrice(), item.getRequestedPaymentMethod(),
+                item.getStatus(), item.getCreatedAt(),
                 serviceImages.size(),
                 serviceImages.isEmpty() ? null : serviceImages.getFirst().getImageUrl(),
                 serviceImages.stream().map(image -> new ServiceRequestImageResponse(

@@ -1,6 +1,7 @@
 package com.tecngo.service_requests.entity;
 
 import com.tecngo.catalogs.entity.City;
+import com.tecngo.payments.entity.PaymentMethod;
 import com.tecngo.services.entity.ServiceCategory;
 import com.tecngo.users.entity.User;
 import jakarta.persistence.*;
@@ -42,6 +43,9 @@ public class ServiceRequest {
     private BigDecimal technicianPrice;
     @Column(precision = 12, scale = 2)
     private BigDecimal finalPrice;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentMethod requestedPaymentMethod;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RequestStatus status;

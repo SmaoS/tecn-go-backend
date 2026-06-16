@@ -76,6 +76,22 @@ public class User implements UserDetails {
     @Column(length = 500)
     private String documentPhotoUrl;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private DocumentType documentType;
+
+    @Column(length = 50)
+    private String documentNumber;
+
+    @Column(length = 500)
+    private String documentFrontUrl;
+
+    @Column(length = 500)
+    private String documentBackUrl;
+
+    @Column(length = 500)
+    private String documentSingleUrl;
+
     @Column(length = 500)
     private String certificatePhotoUrl;
 
@@ -133,6 +149,13 @@ public class User implements UserDetails {
     private String profilePhotoPublicId;
     @Column(nullable = false)
     private boolean profilePhotoFaceValidated;
+    @Column(nullable = false)
+    private boolean onboardingCompleted;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OnboardingStep onboardingStep;
+    @Column(nullable = false)
+    private boolean profileSelfieLocked;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_photo_verified_by_user_id")
     private User profilePhotoVerifiedBy;
@@ -144,7 +167,12 @@ public class User implements UserDetails {
         if (averageRating == null) averageRating = new BigDecimal("5.00");
         if (verificationStatus == null) verificationStatus = VerificationStatus.CREATED;
         if (accountStatus == null) accountStatus = AccountStatus.ACTIVE;
+        if (onboardingStep == null) onboardingStep = OnboardingStep.MAIN_DATA;
         if (role == Role.ADMIN || role == Role.VERIFIER) emailVerified = true;
+        if (role == Role.ADMIN || role == Role.VERIFIER) {
+            onboardingCompleted = true;
+            onboardingStep = OnboardingStep.COMPLETED;
+        }
     }
 
     @Override

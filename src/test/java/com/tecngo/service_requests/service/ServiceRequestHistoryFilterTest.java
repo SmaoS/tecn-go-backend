@@ -64,6 +64,7 @@ class ServiceRequestHistoryFilterTest {
         ArgumentCaptor<Set<RequestStatus>> statuses = ArgumentCaptor.forClass(Set.class);
         verify(requests).findByTechnicianIdAndStatusInOrderByCreatedAtDesc(
                 org.mockito.ArgumentMatchers.eq(technician.getId()), statuses.capture());
-        assertThat(statuses.getValue()).containsExactlyInAnyOrder(RequestStatus.PAID, RequestStatus.CANCELLED);
+        assertThat(statuses.getValue()).containsExactlyInAnyOrder(
+                RequestStatus.PAID, RequestStatus.CANCELLED, RequestStatus.PAYMENT_DISPUTE);
     }
 }

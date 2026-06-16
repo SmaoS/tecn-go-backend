@@ -9,5 +9,6 @@ public enum RequestStatus {
     IN_PROGRESS,
     COMPLETED,
     PAID,
+    PAYMENT_DISPUTE,
     CANCELLED
 }
