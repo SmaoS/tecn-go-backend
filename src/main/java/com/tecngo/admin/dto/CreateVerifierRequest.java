@@ -3,6 +3,7 @@ package com.tecngo.admin.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.util.UUID;
 
 public record CreateVerifierRequest(
         @NotBlank String fullName,
@@ -12,5 +13,8 @@ public record CreateVerifierRequest(
         Double homeLatitude,
         Double homeLongitude,
         String homeCity,
-        String homeNeighborhood
+        String homeNeighborhood,
+        UUID countryId,
+        UUID departmentId,
+        UUID cityId
 ) {}

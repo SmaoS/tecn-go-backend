@@ -2,6 +2,7 @@ package com.tecngo.admin.service;
 
 import com.tecngo.admin.dto.CreateVerifierRequest;
 import com.tecngo.admin.dto.VerifierResponse;
+import com.tecngo.catalogs.service.GeographicCatalogService;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
@@ -19,13 +20,14 @@ import java.util.List;
 public class VerifierService {
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
+    private final GeographicCatalogService geographicCatalogs;
 
     @Transactional
     public VerifierResponse create(CreateVerifierRequest request, User admin) {
         if (users.existsByEmailIgnoreCase(request.email())) {
             throw new ConflictException("Email is already registered");
         }
-        User verifier = users.save(User.builder()
+        User verifier = User.builder()
                 .fullName(request.fullName().trim())
                 .email(request.email().trim().toLowerCase())
                 .password(passwordEncoder.encode(request.password()))
@@ -38,7 +40,16 @@ public class VerifierService {
                 .homeLongitude(request.homeLongitude())
                 .homeCity(clean(request.homeCity()))
                 .homeNeighborhood(clean(request.homeNeighborhood()))
-                .build());
+                .build();
+        if (request.countryId() != null || request.departmentId() != null || request.cityId() != null) {
+            var selection = geographicCatalogs.requireSelection(
+                    request.countryId(), request.departmentId(), request.cityId());
+            verifier.setCountry(selection.country());
+            verifier.setDepartment(selection.department());
+            verifier.setCity(selection.city());
+            verifier.setHomeCity(selection.city().getName());
+        }
+        verifier = users.save(verifier);
         return map(verifier);
     }
 
