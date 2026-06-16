@@ -19,7 +19,7 @@ public class UserOperationGuardInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof User user) {
-            guard.requireAllowed(user, request.getMethod(), request.getRequestURI());
+            guard.requireAllowed(user, request.getMethod(), request.getServletPath());
         }
         return true;
     }
