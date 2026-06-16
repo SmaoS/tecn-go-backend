@@ -5,6 +5,8 @@ import com.tecngo.users.entity.AccountStatus;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.VerificationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +15,14 @@ import java.util.Set;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmailIgnoreCase(String email);
+    @Query("""
+            select u from User u
+            left join fetch u.country
+            left join fetch u.department
+            left join fetch u.city
+            where u.id = :id
+            """)
+    Optional<User> findProfileById(@Param("id") UUID id);
     boolean existsByEmailIgnoreCase(String email);
     boolean existsByProfilePhotoUrl(String url);
     boolean existsByDocumentPhotoUrlOrCertificatePhotoUrl(String documentUrl, String certificateUrl);

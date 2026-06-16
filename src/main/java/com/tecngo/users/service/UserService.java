@@ -11,6 +11,7 @@ import com.tecngo.password_recovery.entity.PasswordSecurityAudit;
 import com.tecngo.password_recovery.repository.PasswordResetTokenRepository;
 import com.tecngo.password_recovery.repository.PasswordSecurityAuditRepository;
 import com.tecngo.shared.exception.UnauthorizedException;
+import com.tecngo.shared.exception.NotFoundException;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.entity.VerificationStatus;
@@ -42,11 +43,12 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserProfileResponse profile(User user) {
-        return map(user);
+        return map(profileUser(user));
     }
 
     @Transactional
-    public UserProfileResponse updateProfile(User user, UserProfileRequest request) {
+    public UserProfileResponse updateProfile(User authenticatedUser, UserProfileRequest request) {
+        User user = profileUser(authenticatedUser);
         if (user.getRole() == Role.TECHNICIAN
                 && (request.workExperienceDescription() == null
                 || request.workExperienceDescription().isBlank())) {
@@ -86,6 +88,11 @@ public class UserService {
         }
         updateVerificationStatus(user, previousDocument, newDocument);
         return map(users.save(user));
+    }
+
+    private User profileUser(User user) {
+        return users.findProfileById(user.getId())
+                .orElseThrow(() -> new NotFoundException("User not found"));
     }
 
     @Transactional
