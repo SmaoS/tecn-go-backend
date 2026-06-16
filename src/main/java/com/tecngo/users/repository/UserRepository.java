@@ -25,6 +25,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findProfileById(@Param("id") UUID id);
     boolean existsByEmailIgnoreCase(String email);
     boolean existsByProfilePhotoUrl(String url);
+    Optional<User> findByProfilePhotoUrl(String url);
     boolean existsByDocumentPhotoUrlOrCertificatePhotoUrl(String documentUrl, String certificateUrl);
     List<User> findByVerificationStatusOrderByCreatedAtAsc(VerificationStatus status);
     long countByVerificationStatus(VerificationStatus status);

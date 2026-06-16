@@ -64,6 +64,7 @@ public class FileController {
             throw new ForbiddenException("This file is private or has not been approved");
         }
         boolean privateEvidence = fileName.startsWith("private-")
+                || users.existsByProfilePhotoUrl(url)
                 || users.existsByDocumentPhotoUrlOrCertificatePhotoUrl(url, url);
         if (asset == null && privateEvidence && !canViewPrivate(viewer, url)) {
             throw new ForbiddenException("This evidence file is private");
@@ -86,6 +87,11 @@ public class FileController {
     private boolean canViewPrivate(User viewer, String url) {
         if (viewer == null) return false;
         if (viewer.getRole() == Role.ADMIN || viewer.getRole() == Role.VERIFIER) return true;
+        var profileOwner = users.findByProfilePhotoUrl(url).orElse(null);
+        if (profileOwner != null) {
+            return profileOwner.getId().equals(viewer.getId())
+                    || profileOwner.isProfilePhotoFaceValidated();
+        }
         if (url.equals(viewer.getDocumentPhotoUrl()) || url.equals(viewer.getCertificatePhotoUrl())) return true;
         var evidence = evidences.findByFileUrl(url).orElse(null);
         if (evidence != null) {

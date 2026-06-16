@@ -44,6 +44,7 @@ public class VerificationService {
         user.setDocumentsVerified(true);
         user.setVerifiedAt(Instant.now());
         user.setVerifiedBy(reviewer);
+        approveProfilePhotoIfPresent(user, reviewer);
         return map(users.save(user));
     }
 
@@ -71,6 +72,15 @@ public class VerificationService {
         user.setProfilePhotoFaceValidated(true);
         user.setProfilePhotoVerifiedBy(reviewer);
         user.setProfilePhotoVerifiedAt(Instant.now());
+        approveProfilePhotoIfPresent(user, reviewer);
+        return map(users.save(user));
+    }
+
+    private void approveProfilePhotoIfPresent(User user, User reviewer) {
+        if (user.getProfilePhotoUrl() == null || user.getProfilePhotoUrl().isBlank()) return;
+        user.setProfilePhotoFaceValidated(true);
+        user.setProfilePhotoVerifiedBy(reviewer);
+        user.setProfilePhotoVerifiedAt(Instant.now());
         contentAssets.findByFileUrlAndUploadedById(user.getProfilePhotoUrl(), user.getId())
                 .filter(asset -> asset.getModerationStatus() != ModerationStatus.REJECTED)
                 .ifPresent(asset -> {
@@ -79,7 +89,6 @@ public class VerificationService {
                     asset.setModeratedAt(Instant.now());
                     asset.setModeratedBy(reviewer);
                 });
-        return map(users.save(user));
     }
 
     private UserVerificationResponse map(User user) {
