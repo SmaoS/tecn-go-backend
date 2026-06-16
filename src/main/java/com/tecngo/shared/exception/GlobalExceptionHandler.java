@@ -1,15 +1,19 @@
 package com.tecngo.shared.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
     @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
@@ -65,8 +69,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    ApiError unexpected(Exception ex) {
-        return error(HttpStatus.INTERNAL_SERVER_ERROR, null, "Unexpected server error", null);
+    ApiError unexpected(Exception ex, HttpServletRequest request) {
+        String traceId = UUID.randomUUID().toString();
+        log.error("Unexpected server error [{}] {} {}", traceId, request.getMethod(), request.getRequestURI(), ex);
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, traceId, "Unexpected server error. Reference: " + traceId, null);
     }
 
     private ApiError error(HttpStatus status, String code, String message, Map<String, String> fields) {
