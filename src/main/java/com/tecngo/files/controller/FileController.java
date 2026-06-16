@@ -13,6 +13,7 @@ import com.tecngo.users.repository.UserRepository;
 import com.tecngo.service_evidence.repository.ServiceEvidenceRepository;
 import com.tecngo.payment_proofs.repository.PaymentProofRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,6 +24,7 @@ import java.util.Set;
 @RestController
 @RequestMapping({"/files", "/v1/files"})
 @RequiredArgsConstructor
+@Slf4j
 public class FileController {
     private final FileStorage storage;
     private final UserRepository users;
@@ -61,12 +63,17 @@ public class FileController {
         String url = "/v1/files/" + fileName;
         var asset = assets.findByFileUrl(url).orElse(null);
         if (asset != null && !contentModeration.canDownload(asset, viewer)) {
+            log.warn("Private file denied: fileName={}, assetId={}, kind={}, moderationStatus={}, viewerId={}, viewerRole={}",
+                    fileName, asset.getId(), asset.getKind(), asset.getModerationStatus(),
+                    viewer == null ? null : viewer.getId(), viewer == null ? null : viewer.getRole());
             throw new ForbiddenException("This file is private or has not been approved");
         }
         boolean privateEvidence = fileName.startsWith("private-")
                 || users.existsByProfilePhotoUrl(url)
                 || users.existsByDocumentPhotoUrlOrCertificatePhotoUrl(url, url);
         if (asset == null && privateEvidence && !canViewPrivate(viewer, url)) {
+            log.warn("Private file denied without content asset: fileName={}, viewerId={}, viewerRole={}",
+                    fileName, viewer == null ? null : viewer.getId(), viewer == null ? null : viewer.getRole());
             throw new ForbiddenException("This evidence file is private");
         }
         Resource resource = storage.load(fileName);
