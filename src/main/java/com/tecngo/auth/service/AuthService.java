@@ -82,6 +82,7 @@ public class AuthService {
     private AuthResponse response(User user) {
         return new AuthResponse(jwtService.generateToken(user), user.getId(), user.getFullName(),
                 user.getEmail(), user.getRole(), user.getVerificationStatus(),
-                user.isEmailVerified(), user.isPhoneVerified(), user.isDocumentsVerified());
+                user.isEmailVerified(), user.isPhoneVerified(), user.isDocumentsVerified(),
+                user.isOnboardingCompleted());
     }
 }

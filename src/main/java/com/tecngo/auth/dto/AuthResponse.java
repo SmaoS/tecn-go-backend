@@ -14,5 +14,6 @@ public record AuthResponse(
         VerificationStatus verificationStatus,
         boolean emailVerified,
         boolean phoneVerified,
-        boolean documentsVerified
+        boolean documentsVerified,
+        boolean onboardingCompleted
 ) {}
