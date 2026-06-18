@@ -4,6 +4,7 @@ import com.tecngo.catalogs.service.GeographicCatalogService;
 import com.tecngo.content_moderation.entity.ContentAssetKind;
 import com.tecngo.content_moderation.service.ManagedContentPolicy;
 import com.tecngo.shared.exception.ConflictException;
+import com.tecngo.shared.exception.CodedForbiddenException;
 import com.tecngo.shared.exception.NotFoundException;
 import com.tecngo.services.entity.ServiceCategory;
 import com.tecngo.services.service.ServiceCategoryService;
@@ -95,6 +96,7 @@ public class TechnicianProfileService {
     @Transactional
     public TechnicianAvailabilityResponse updateAvailability(User user, boolean available) {
         TechnicianProfile profile = findByUser(user);
+        if (available) requireOperationalProfile(user, profile);
         profile.setAvailable(available);
         return new TechnicianAvailabilityResponse(available);
     }
@@ -122,8 +124,8 @@ public class TechnicianProfileService {
 
     @Transactional(readOnly = true)
     public TechnicianProfile approvedProfile(User user) {
-        emailVerification.requireVerified(user);
         TechnicianProfile profile = findByUser(user);
+        requireOperationalProfile(user, profile);
         if (profile.getStatus() != TechnicianStatus.APPROVED) {
             throw new IllegalStateException("Technician profile must be approved");
         }
@@ -131,6 +133,23 @@ public class TechnicianProfileService {
             throw new IllegalStateException("Technician identity must be verified");
         }
         return profile;
+    }
+
+    public void requireOperationalProfile(User user, TechnicianProfile profile) {
+        boolean incomplete = !user.isEmailVerified()
+                || !user.isOnboardingCompleted()
+                || user.getDocumentPhotoUrl() == null
+                || user.getDocumentPhotoUrl().isBlank()
+                || user.getWorkExperienceDescription() == null
+                || user.getWorkExperienceDescription().trim().length() < 30
+                || profile.getDescription() == null
+                || profile.getDescription().trim().length() < 30
+                || profile.getCategories() == null
+                || profile.getCategories().isEmpty();
+        if (incomplete) {
+            throw new CodedForbiddenException("TECHNICIAN_PROFILE_INCOMPLETE",
+                    "Completa tu perfil técnico para poder operar.");
+        }
     }
 
     @Transactional(readOnly = true)

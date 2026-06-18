@@ -17,6 +17,7 @@ public record ServiceQuoteResponse(
         long technicianCompletedServicesCount,
         String technicianExperienceDescription,
         List<String> technicianCategories,
+        boolean certifiedTechnician,
         BigDecimal price,
         String description,
         QuoteStatus status,

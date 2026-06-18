@@ -14,6 +14,7 @@ public record ServiceRequestResponse(
         String technicianProfilePhotoUrl, BigDecimal technicianAverageRating,
         long technicianCompletedServicesCount, String technicianExperienceDescription,
         List<String> technicianCategories,
+        boolean certifiedTechnician,
         UUID categoryId, String categoryName, String description, String address,
         Double latitude, Double longitude, Double distanceKm, BigDecimal estimatedPrice,
         BigDecimal technicianPrice, BigDecimal finalPrice, PaymentMethod requestedPaymentMethod,

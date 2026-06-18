@@ -2,6 +2,8 @@ package com.tecngo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tecngo.users.entity.OnboardingStep;
+import com.tecngo.users.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -11,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -20,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MultipleQuotesIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
+    @Autowired UserRepository users;
 
     @Test
     void multipleTechniciansCanQuoteUntilClientAcceptsOne() throws Exception {
@@ -115,9 +119,9 @@ class MultipleQuotesIntegrationTest {
                                 Map.entry("documentNumber", document),
                                 Map.entry("phone", "3001234567"),
                                 Map.entry("categoryIds", List.of(categoryId)),
-                                Map.entry("description", "Técnico disponible"),
+                                Map.entry("description", "Técnico con experiencia comprobada en servicios residenciales"),
                                 Map.entry("documentPhotoUrl", "/v1/files/" + document + ".pdf"),
-                                Map.entry("workExperienceDescription", "Experiencia comprobada"),
+                                Map.entry("workExperienceDescription", "Experiencia comprobada en instalaciones y reparaciones residenciales"),
                                 Map.entry("latitude", latitude),
                                 Map.entry("longitude", longitude),
                                 Map.entry("homeAddress", "Calle 10 # 20-30"),
@@ -132,7 +136,12 @@ class MultipleQuotesIntegrationTest {
         mvc.perform(put("/v1/admin/technicians/{id}/approve", profile.get("id").asText())
                         .header("Authorization", bearer(admin)))
                 .andExpect(status().isOk());
-        return session;
+        var technician = users.findById(UUID.fromString(session.get("userId").asText())).orElseThrow();
+        technician.setEmailVerified(true);
+        technician.setOnboardingCompleted(true);
+        technician.setOnboardingStep(OnboardingStep.COMPLETED);
+        users.save(technician);
+        return login(email, "TecnGo123!");
     }
 
     private JsonNode quote(String requestId, JsonNode technician, int price, String description) throws Exception {

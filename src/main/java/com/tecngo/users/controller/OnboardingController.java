@@ -41,6 +41,13 @@ public class OnboardingController {
         return service.identityDocument(user, request);
     }
 
+    @PutMapping("/v1/technicians/me/onboarding/professional-profile")
+    public OnboardingStatusResponse professionalProfile(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody TechnicianProfessionalProfileRequest request) {
+        return service.professionalProfile(user, request);
+    }
+
     @PutMapping("/v1/users/me/onboarding/complete")
     public OnboardingStatusResponse complete(@AuthenticationPrincipal User user) {
         return service.complete(user);

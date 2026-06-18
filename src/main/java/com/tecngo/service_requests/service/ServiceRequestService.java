@@ -178,15 +178,15 @@ public class ServiceRequestService {
             throw new IllegalArgumentException("radiusKm must be greater than 0 and at most 100");
         }
         var profile = technicianProfiles.approvedProfile(technician);
-        if (profile.getLatitude() == null || profile.getLongitude() == null) {
-            throw new ConflictException("Technician location is required");
-        }
         List<UUID> categoryIds = profile.getCategories().stream().map(item -> item.getId()).toList();
         var liveLocation = technicianLocations.findByTechnicianId(technician.getId()).orElse(null);
-        double originLatitude = liveLocation != null && liveLocation.isOnline()
+        Double originLatitude = liveLocation != null && liveLocation.isOnline()
                 ? liveLocation.getLatitude() : profile.getLatitude();
-        double originLongitude = liveLocation != null && liveLocation.isOnline()
+        Double originLongitude = liveLocation != null && liveLocation.isOnline()
                 ? liveLocation.getLongitude() : profile.getLongitude();
+        if (originLatitude == null || originLongitude == null) {
+            throw new ConflictException("Technician GPS location is required");
+        }
         return requests.findAvailable(RequestStatus.QUOTE_PENDING, categoryIds).stream()
                 .filter(item -> technician.getCity() == null || item.getCity() == null
                         || technician.getCity().getId().equals(item.getCity().getId()))
@@ -497,6 +497,8 @@ public class ServiceRequestService {
                 technician == null ? 0 : technician.getCompletedServicesCount(),
                 technician == null ? null : technician.getWorkExperienceDescription(),
                 technician == null ? List.of() : technicianProfiles.categoryNames(technician),
+                technician != null && technician.isDocumentsVerified()
+                        && !blank(technician.getCertificatePhotoUrl()),
                 item.getCategory().getId(), item.getCategory().getName(), item.getDescription(),
                 approximateLocation ? approximate(item.getAddress()) : item.getAddress(),
                 approximateLocation ? null : item.getLatitude(), approximateLocation ? null : item.getLongitude(),
@@ -527,6 +529,7 @@ public class ServiceRequestService {
                 technician.getCompletedServicesCount(),
                 technician.getWorkExperienceDescription(),
                 technicianProfiles.categoryNames(technician),
+                technician.isDocumentsVerified() && !blank(technician.getCertificatePhotoUrl()),
                 quote.getPrice(),
                 quote.getDescription(),
                 quote.getStatus(),
@@ -539,6 +542,10 @@ public class ServiceRequestService {
 
     private String clean(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private boolean blank(String value) {
+        return value == null || value.isBlank();
     }
 
     private String approximate(String address) {

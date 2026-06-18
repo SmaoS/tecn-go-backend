@@ -2,6 +2,7 @@ package com.tecngo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tecngo.users.entity.OnboardingStep;
 import com.tecngo.users.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,9 +62,9 @@ class Phase5FlowIntegrationTest {
                                 Map.entry("documentNumber", "DOC-" + suffix),
                                 Map.entry("phone", "3001234567"),
                                 Map.entry("categoryIds", List.of(categoryId)),
-                                Map.entry("description", "Técnico de integración"),
+                                Map.entry("description", "Técnico de integración con experiencia residencial comprobada"),
                                 Map.entry("documentPhotoUrl", "/v1/files/document-" + suffix + ".pdf"),
-                                Map.entry("workExperienceDescription", "Cinco años de experiencia"),
+                                Map.entry("workExperienceDescription", "Cinco años de experiencia en instalaciones y reparaciones eléctricas"),
                                 Map.entry("latitude", 4.711),
                                 Map.entry("longitude", -74.0721),
                                 Map.entry("homeAddress", "Calle 10 # 20-30"),
@@ -80,6 +81,12 @@ class Phase5FlowIntegrationTest {
         mvc.perform(put("/v1/admin/technicians/{id}/approve", profile.get("id").asText())
                         .header("Authorization", bearer(admin)))
                 .andExpect(status().isOk());
+        var technicianUser = users.findById(java.util.UUID.fromString(technician.get("userId").asText())).orElseThrow();
+        technicianUser.setEmailVerified(true);
+        technicianUser.setOnboardingCompleted(true);
+        technicianUser.setOnboardingStep(OnboardingStep.COMPLETED);
+        users.save(technicianUser);
+        technician = login("tech." + suffix + "@tecngo.local", "TecnGo123!");
 
         JsonNode request = json(mvc.perform(post("/v1/service-requests")
                         .header("Authorization", bearer(client))

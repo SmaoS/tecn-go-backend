@@ -22,6 +22,10 @@ public class UserOperationGuard {
         }
         if (isOnboardingAllowed(method, path)) return;
         if (requireOnboardingCompletion && !user.isOnboardingCompleted()) {
+            if (user.getRole() == Role.TECHNICIAN) {
+                throw new CodedForbiddenException("TECHNICIAN_PROFILE_INCOMPLETE",
+                        "Completa tu perfil técnico para poder operar.");
+            }
             throw new CodedForbiddenException("ONBOARDING_REQUIRED",
                     "Debes completar tu inscripción para continuar.");
         }
@@ -47,6 +51,8 @@ public class UserOperationGuard {
         return path.startsWith("/v1/users/me/onboarding")
                 || path.startsWith("/v1/technicians/me/onboarding")
                 || path.startsWith("/v1/catalogs/")
+                || path.equals("/v1/service-categories")
+                || path.equals("/v1/services")
                 || path.equals("/v1/files/upload")
                 || path.equals("/v1/users/me/fcm-token");
     }

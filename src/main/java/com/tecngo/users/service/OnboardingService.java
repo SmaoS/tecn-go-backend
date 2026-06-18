@@ -6,6 +6,10 @@ import com.tecngo.content_moderation.service.ManagedContentPolicy;
 import com.tecngo.legal.service.LegalService;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.shared.exception.ForbiddenException;
+import com.tecngo.services.entity.ServiceCategory;
+import com.tecngo.services.service.ServiceCategoryService;
+import com.tecngo.technicians.entity.TechnicianProfile;
+import com.tecngo.technicians.repository.TechnicianProfileRepository;
 import com.tecngo.users.dto.*;
 import com.tecngo.users.entity.*;
 import com.tecngo.users.repository.UserRepository;
@@ -14,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -24,6 +29,8 @@ public class OnboardingService {
     private final GeographicCatalogService geographicCatalogs;
     private final ManagedContentPolicy managedContent;
     private final LegalService legal;
+    private final TechnicianProfileRepository technicianProfiles;
+    private final ServiceCategoryService serviceCategories;
 
     @Transactional(readOnly = true)
     public OnboardingStatusResponse status(User user) {
@@ -110,7 +117,7 @@ public class OnboardingService {
         user.setDocumentsVerified(false);
         user.setVerificationStatus(VerificationStatus.PENDING_VERIFICATION);
         if (user.getRole() == Role.TECHNICIAN) {
-            user.setOnboardingStep(OnboardingStep.TECHNICIAN_CERTIFICATE);
+            user.setOnboardingStep(OnboardingStep.TECHNICIAN_PROFESSIONAL_PROFILE);
         } else {
             markCompleted(user);
         }
@@ -119,8 +126,48 @@ public class OnboardingService {
     }
 
     @Transactional
+    public OnboardingStatusResponse professionalProfile(
+            User user, TechnicianProfessionalProfileRequest request) {
+        requireTechnician(user);
+        if (request.categoryIds() == null || request.categoryIds().isEmpty()) {
+            throw new IllegalArgumentException("At least one service category is required");
+        }
+        if (blank(request.workExperienceDescription())) {
+            throw new IllegalArgumentException("Work experience description is required");
+        }
+        String experience = request.workExperienceDescription().trim();
+        if (experience.length() < 30 || experience.length() > 1000) {
+            throw new IllegalArgumentException(
+                    "Work experience description must contain between 30 and 1000 characters");
+        }
+        Set<ServiceCategory> categories = new HashSet<>();
+        request.categoryIds().forEach(id -> categories.add(serviceCategories.requireActive(id)));
+        TechnicianProfile profile = technicianProfiles.findByUserId(user.getId()).orElse(null);
+        if (profile == null) {
+            if (technicianProfiles.existsByDocumentNumber(user.getDocumentNumber())) {
+                throw new ConflictException("Document number is already registered");
+            }
+            profile = TechnicianProfile.builder()
+                    .user(user)
+                    .documentNumber(user.getDocumentNumber())
+                    .phone(user.getPhone())
+                    .build();
+        }
+        profile.setDocumentNumber(user.getDocumentNumber());
+        profile.setPhone(user.getPhone());
+        profile.setCategories(categories);
+        profile.setDescription(experience);
+        technicianProfiles.save(profile);
+        user.setWorkExperienceDescription(experience);
+        user.setOnboardingStep(OnboardingStep.TECHNICIAN_CERTIFICATE);
+        users.save(user);
+        return status(user);
+    }
+
+    @Transactional
     public OnboardingStatusResponse certificate(User user, CertificateRequest request) {
         requireTechnician(user);
+        requireProfessionalProfile(user);
         if (!blank(request.certificateUrl())) {
             user.setCertificatePhotoUrl(managedContent.validateChange(user.getCertificatePhotoUrl(),
                     request.certificateUrl(), user, Set.of(ContentAssetKind.CERTIFICATE)));
@@ -133,6 +180,7 @@ public class OnboardingService {
     @Transactional
     public OnboardingStatusResponse skipCertificate(User user) {
         requireTechnician(user);
+        requireProfessionalProfile(user);
         markCompleted(user);
         users.save(user);
         return status(user);
@@ -175,6 +223,9 @@ public class OnboardingService {
         if (user.getDocumentType() == DocumentType.PASSPORT && blank(user.getDocumentSingleUrl())) {
             return OnboardingStep.IDENTITY_DOCUMENT;
         }
+        if (user.getRole() == Role.TECHNICIAN && !hasProfessionalProfile(user)) {
+            return OnboardingStep.TECHNICIAN_PROFESSIONAL_PROFILE;
+        }
         if (user.getRole() == Role.TECHNICIAN && user.getOnboardingStep() == OnboardingStep.TECHNICIAN_CERTIFICATE) {
             return OnboardingStep.TECHNICIAN_CERTIFICATE;
         }
@@ -184,8 +235,27 @@ public class OnboardingService {
     private List<OnboardingStep> requiredSteps(User user) {
         List<OnboardingStep> steps = new ArrayList<>(List.of(OnboardingStep.MAIN_DATA,
                 OnboardingStep.LEGAL_ACCEPTANCE, OnboardingStep.PROFILE_SELFIE, OnboardingStep.IDENTITY_DOCUMENT));
-        if (user.getRole() == Role.TECHNICIAN) steps.add(OnboardingStep.TECHNICIAN_CERTIFICATE);
+        if (user.getRole() == Role.TECHNICIAN) {
+            steps.add(OnboardingStep.TECHNICIAN_PROFESSIONAL_PROFILE);
+            steps.add(OnboardingStep.TECHNICIAN_CERTIFICATE);
+        }
         return steps;
+    }
+
+    private boolean hasProfessionalProfile(User user) {
+        return technicianProfiles.findByUserId(user.getId())
+                .map(profile -> !profile.getCategories().isEmpty()
+                        && !blank(profile.getDescription())
+                        && profile.getDescription().trim().length() >= 30
+                        && !blank(user.getWorkExperienceDescription())
+                        && user.getWorkExperienceDescription().trim().length() >= 30)
+                .orElse(false);
+    }
+
+    private void requireProfessionalProfile(User user) {
+        if (!hasProfessionalProfile(user)) {
+            throw new ConflictException("Technician professional profile is pending");
+        }
     }
 
     private void markCompleted(User user) {
