@@ -52,9 +52,9 @@ class ServiceRequestCityFilterTest {
                 .categories(Set.of(category)).available(false).build();
         User client = User.builder().id(UUID.randomUUID()).fullName("Cliente")
                 .averageRating(new BigDecimal("5.00")).build();
-        ServiceRequest farther = request(category, city, client, 4.12, -73.62);
+        ServiceRequest farther = request(category, city, client, 4.1247, -73.6249);
         ServiceRequest other = request(category, otherCity, client, 4.10, -73.60);
-        ServiceRequest nearby = request(category, city, client, 4.11, -73.61);
+        ServiceRequest nearby = request(category, city, client, 4.1137, -73.6138);
         when(technicianProfiles.approvedProfile(technician)).thenReturn(profile);
         when(technicianLocations.findByTechnicianId(technician.getId())).thenReturn(java.util.Optional.empty());
         when(requests.findAvailable(RequestStatus.QUOTE_PENDING, List.of(category.getId())))
@@ -67,6 +67,10 @@ class ServiceRequestCityFilterTest {
         var result = service.available(technician, 10);
 
         assertThat(result).extracting("id").containsExactly(nearby.getId(), farther.getId());
+        assertThat(result.getFirst().latitude()).isEqualTo(4.11);
+        assertThat(result.getFirst().longitude()).isEqualTo(-73.61);
+        assertThat(result.getLast().latitude()).isEqualTo(4.12);
+        assertThat(result.getLast().longitude()).isEqualTo(-73.62);
     }
 
     private ServiceRequest request(ServiceCategory category, City city, User client,

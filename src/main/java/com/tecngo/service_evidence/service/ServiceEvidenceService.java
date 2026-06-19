@@ -47,7 +47,7 @@ public class ServiceEvidenceService {
         if (user.getRole() == Role.TECHNICIAN) {
             events.publishEvent(new UserNotificationEvent(
                     request.getClient().getId(),
-                    "Nueva evidencia del servicio",
+                    "Nueva evidencia recibida",
                     user.getFullName() + " subió una evidencia",
                     NotificationType.SERVICE_EVIDENCE_UPLOADED,
                     Map.of("type", "SERVICE_REQUEST", "requestId", request.getId().toString(),

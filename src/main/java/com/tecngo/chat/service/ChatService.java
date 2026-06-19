@@ -85,7 +85,7 @@ public class ChatService {
             String notificationText = result.status() == ChatModerationStatus.APPROVED
                     ? sender.getFullName() + ": " + text.trim()
                     : sender.getFullName() + " envió un mensaje pendiente de revisión";
-            events.publishEvent(new UserNotificationEvent(recipient.getId(), "Nuevo mensaje",
+            events.publishEvent(new UserNotificationEvent(recipient.getId(), "Nuevo mensaje recibido",
                     notificationText, NotificationType.NEW_CHAT_MESSAGE,
                     Map.of(
                             "type", "CHAT",

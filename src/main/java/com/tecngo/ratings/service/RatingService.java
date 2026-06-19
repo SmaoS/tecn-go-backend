@@ -69,7 +69,7 @@ public class RatingService {
         referrals.qualifyFromRating(request, saved);
         events.publishEvent(new UserNotificationEvent(
                 ratedUser.getId(),
-                "Nueva calificación",
+                "Nueva calificación recibida",
                 rater.getFullName() + " calificó el servicio con " + input.score() + " estrellas",
                 NotificationType.NEW_RATING,
                 Map.of(

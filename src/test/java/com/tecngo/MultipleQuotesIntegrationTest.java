@@ -71,6 +71,12 @@ class MultipleQuotesIntegrationTest {
 
         JsonNode firstQuote = quote(requestId, first, 120000, "Primera oferta");
 
+        mvc.perform(get("/v1/notifications").header("Authorization", bearer(client)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Nueva cotización recibida"))
+                .andExpect(jsonPath("$[0].message").value(org.hamcrest.Matchers.containsString("$120.000 COP")))
+                .andExpect(jsonPath("$[0].message").value(org.hamcrest.Matchers.containsString("First " + suffix)));
+
         mvc.perform(get("/v1/service-requests/available?radiusKm=10")
                         .header("Authorization", bearer(second)))
                 .andExpect(status().isOk())

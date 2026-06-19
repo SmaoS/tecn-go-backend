@@ -51,7 +51,9 @@ import java.util.Map;
 import java.util.List;
 import java.util.UUID;
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.util.Comparator;
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -236,8 +238,9 @@ public class ServiceRequestService {
         quote.setPrice(technicianPrice);
         quote.setDescription(clean(description));
         quote = quotes.save(quote);
-        events.publishEvent(new UserNotificationEvent(request.getClient().getId(), "Nueva cotización",
-                technician.getFullName() + " cotizó tu solicitud por $" + technicianPrice,
+        events.publishEvent(new UserNotificationEvent(request.getClient().getId(), "Nueva cotización recibida",
+                technician.getFullName() + " cotizó " + formatCop(technicianPrice)
+                        + " para tu solicitud " + request.getCategory().getName(),
                 NotificationType.NEW_QUOTE, requestData(request)));
         return mapQuote(quote);
     }
@@ -275,8 +278,10 @@ public class ServiceRequestService {
         request.setTechnicianPrice(selected.getPrice());
         request.setFinalPrice(selected.getPrice());
         request.setStatus(RequestStatus.QUOTE_ACCEPTED);
-        events.publishEvent(new UserNotificationEvent(selected.getTechnician().getId(), "Cotización aceptada",
-                request.getClient().getFullName() + " aceptó tu cotización",
+        events.publishEvent(new UserNotificationEvent(selected.getTechnician().getId(),
+                "Cotización aceptada por el cliente",
+                request.getClient().getFullName() + " aceptó tu cotización para "
+                        + request.getCategory().getName(),
                 NotificationType.QUOTE_ACCEPTED, requestData(request)));
         return map(request);
     }
@@ -344,7 +349,7 @@ public class ServiceRequestService {
             request.getClient().setCompletedServicesCount(request.getClient().getCompletedServicesCount() + 1);
             request.getTechnician().setCompletedServicesCount(request.getTechnician().getCompletedServicesCount() + 1);
         }
-        events.publishEvent(new UserNotificationEvent(request.getClient().getId(), "Estado actualizado",
+        events.publishEvent(new UserNotificationEvent(request.getClient().getId(), statusTitle(nextStatus),
                 statusMessage(nextStatus), notificationType(nextStatus), requestData(request)));
         return map(request);
     }
@@ -438,7 +443,7 @@ public class ServiceRequestService {
                         request.getLatitude(), request.getLongitude()) <= newRequestRadiusKm)
                 .forEach(profile -> events.publishEvent(new UserNotificationEvent(
                         profile.getUser().getId(),
-                        "Nueva solicitud cercana",
+                        "Nueva solicitud cercana disponible",
                         request.getCategory().getName() + " a menos de " + Math.round(newRequestRadiusKm) + " km",
                         NotificationType.NEW_REQUEST,
                         Map.of(
@@ -465,6 +470,21 @@ public class ServiceRequestService {
             case COMPLETED -> "El técnico marcó el servicio como completado";
             default -> "Tu servicio cambió a " + status;
         };
+    }
+
+    private String statusTitle(RequestStatus status) {
+        return switch (status) {
+            case ON_THE_WAY -> "Técnico en camino";
+            case ARRIVED -> "Técnico llegó al servicio";
+            case IN_PROGRESS -> "Servicio iniciado";
+            case COMPLETED -> "Servicio finalizado";
+            default -> "Estado del servicio actualizado";
+        };
+    }
+
+    private String formatCop(BigDecimal value) {
+        NumberFormat formatter = NumberFormat.getIntegerInstance(Locale.forLanguageTag("es-CO"));
+        return "$" + formatter.format(value.setScale(0, java.math.RoundingMode.HALF_UP)) + " COP";
     }
 
     private Map<String, String> requestData(ServiceRequest request) {
@@ -501,7 +521,8 @@ public class ServiceRequestService {
                         && !blank(technician.getCertificatePhotoUrl()),
                 item.getCategory().getId(), item.getCategory().getName(), item.getDescription(),
                 approximateLocation ? approximate(item.getAddress()) : item.getAddress(),
-                approximateLocation ? null : item.getLatitude(), approximateLocation ? null : item.getLongitude(),
+                approximateLocation ? approximateCoordinate(item.getLatitude()) : item.getLatitude(),
+                approximateLocation ? approximateCoordinate(item.getLongitude()) : item.getLongitude(),
                 distanceKm, item.getEstimatedPrice(),
                 item.getTechnicianPrice(), item.getFinalPrice(), item.getRequestedPaymentMethod(),
                 item.getStatus(), item.getCreatedAt(),
@@ -556,6 +577,11 @@ public class ServiceRequestService {
                 .map(String::trim).toList());
     }
 
+    private Double approximateCoordinate(Double coordinate) {
+        if (coordinate == null) return null;
+        return Math.round(coordinate * 100.0) / 100.0;
+    }
+
     private ServiceRequest find(UUID id) {
         return requests.findById(id).orElseThrow(() -> new NotFoundException("Service request not found"));
     }
@@ -595,7 +621,8 @@ public class ServiceRequestService {
         events.publishEvent(new UserNotificationEvent(
                 technician.getId(),
                 "Cotización no seleccionada",
-                request.getClient().getFullName() + " eligió otra cotización o rechazó tu oferta",
+                request.getClient().getFullName() + " eligió otra cotización o rechazó tu oferta para "
+                        + request.getCategory().getName(),
                 NotificationType.QUOTE_REJECTED,
                 Map.of(
                         "type", "SERVICE_REQUEST",

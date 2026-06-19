@@ -50,7 +50,7 @@ public class PaymentProofService {
                 .fileUrl(stored.accessUrl()).publicId(stored.publicId()).amount(amount)
                 .contentAsset(result.asset()).paymentMethod(method).build());
         if (user.getRole() == Role.CLIENT && request.getTechnician() != null) {
-            notifyUser(request.getTechnician(), request, "Nuevo comprobante de pago",
+            notifyUser(request.getTechnician(), request, "Nuevo comprobante de pago recibido",
                     user.getFullName() + " subió un comprobante de pago",
                     NotificationType.PAYMENT_PROOF_UPLOADED);
         }
