@@ -50,8 +50,20 @@ La guía completa está en `tecngo-infra/DEPLOY_RAILWAY.md`.
 
 ## Roles y usuario administrador
 
-Los roles disponibles son `CLIENT`, `TECHNICIAN`, `VERIFIER` y `ADMIN`. El JWT incluye
-el claim `role` y la respuesta de autenticación incluye `verificationStatus`.
+Los roles disponibles son `CLIENT`, `TECHNICIAN`, `VERIFIER` y `ADMIN`. Desde la
+migración `V30`, las capacidades se almacenan en `user_roles` y una cuenta puede tener
+los roles `CLIENT` y `TECHNICIAN`. La columna `users.role` se conserva temporalmente
+como rol principal para mantener compatibilidad con clientes y consultas existentes.
+
+El JWT incluye:
+
+- `role`: rol principal compatible con versiones anteriores.
+- `roles`: lista completa de capacidades de la cuenta.
+- `active_mode`: `CLIENT` o `TECHNICIAN` cuando aplica.
+
+La respuesta de autenticación conserva `role` y añade `roles` y `activeMode`. Los
+cambios futuros de modo se registran en `user_active_mode_audits`.
+
 El registro público solo permite `CLIENT` y `TECHNICIAN`; los verificadores se crean
 desde el panel administrativo. En desarrollo se crea este administrador si todavía no
 existe:

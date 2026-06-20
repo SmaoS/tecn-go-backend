@@ -12,8 +12,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.time.Instant;
 import java.math.BigDecimal;
 import java.util.Collection;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
@@ -39,6 +41,17 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "role", nullable = false, length = 30)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private Set<Role> roles = new LinkedHashSet<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private ActiveMode activeMode;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -175,6 +188,11 @@ public class User implements UserDetails {
         if (verificationStatus == null) verificationStatus = VerificationStatus.CREATED;
         if (accountStatus == null) accountStatus = AccountStatus.ACTIVE;
         if (onboardingStep == null) onboardingStep = OnboardingStep.MAIN_DATA;
+        if (roles == null) roles = new LinkedHashSet<>();
+        if (role != null) roles.add(role);
+        if (activeMode == null && (role == Role.CLIENT || role == Role.TECHNICIAN)) {
+            activeMode = ActiveMode.valueOf(role.name());
+        }
         if (role == Role.ADMIN || role == Role.VERIFIER) emailVerified = true;
         if (role == Role.ADMIN || role == Role.VERIFIER) {
             onboardingCompleted = true;
@@ -182,9 +200,33 @@ public class User implements UserDetails {
         }
     }
 
+    public Set<Role> getEffectiveRoles() {
+        LinkedHashSet<Role> effectiveRoles = new LinkedHashSet<>();
+        if (roles != null) effectiveRoles.addAll(roles);
+        if (role != null) effectiveRoles.add(role);
+        return Set.copyOf(effectiveRoles);
+    }
+
+    public boolean hasRole(Role expectedRole) {
+        return getEffectiveRoles().contains(expectedRole);
+    }
+
+    public void addRole(Role newRole) {
+        if (roles == null) roles = new LinkedHashSet<>();
+        roles.add(newRole);
+        if (role == null) role = newRole;
+        if (activeMode == null && (newRole == Role.CLIENT || newRole == Role.TECHNICIAN)) {
+            activeMode = ActiveMode.valueOf(newRole.name());
+        }
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+        return getEffectiveRoles().stream()
+                .map(Role::name)
+                .sorted()
+                .map(name -> new SimpleGrantedAuthority("ROLE_" + name))
+                .collect(Collectors.toUnmodifiableList());
     }
 
     @Override
