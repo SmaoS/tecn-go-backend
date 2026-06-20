@@ -15,6 +15,8 @@ import java.util.Set;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmailIgnoreCase(String email);
+    Optional<User> findByPhoneNormalized(String phoneNormalized);
+    boolean existsByPhoneNormalized(String phoneNormalized);
     @Query("""
             select u from User u
             left join fetch u.country

@@ -16,9 +16,9 @@ public class UserOperationGuard {
     public void requireAllowed(User user, String method, String path) {
         if (user == null || user.getRole() == Role.ADMIN || user.getRole() == Role.VERIFIER) return;
         if (isAlwaysAllowed(method, path)) return;
-        if (requireEmailVerification && !user.isEmailVerified()) {
-            throw new CodedForbiddenException("EMAIL_NOT_VERIFIED",
-                    "Debes confirmar tu correo electrónico para continuar.");
+        if (requireEmailVerification && !user.isEmailVerified() && !user.isPhoneVerified()) {
+            throw new CodedForbiddenException("CONTACT_NOT_VERIFIED",
+                    "Debes confirmar tu correo electrónico o celular para continuar.");
         }
         if (isOnboardingAllowed(method, path)) return;
         if (requireOnboardingCompletion && !user.isOnboardingCompleted()) {
@@ -40,6 +40,9 @@ public class UserOperationGuard {
                 || path.equals("/v1/auth/verify-email")
                 || path.equals("/v1/auth/login")
                 || path.equals("/v1/auth/register")
+                || path.startsWith("/v1/auth/phone/")
+                || path.equals("/v1/auth/register-by-phone")
+                || path.equals("/v1/auth/login-by-phone")
                 || path.equals("/error")
                 || method.equals("OPTIONS")
                 || path.startsWith("/swagger-ui")

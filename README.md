@@ -98,12 +98,27 @@ guarda únicamente su hash. En producción `REQUIRE_EMAIL_VERIFICATION=true` blo
 creación de solicitudes y las operaciones sensibles del técnico hasta confirmar el
 correo. Sin `RESEND_API_KEY`, desarrollo escribe el enlace en los logs.
 
+## Autenticación por celular OTP
+
+El usuario puede registrarse e iniciar sesión con celular y contraseña. El registro por
+celular exige verificar primero un OTP y consume un token de verificación de un solo
+uso. Los intentos, vencimiento y límites por teléfono/IP se almacenan en PostgreSQL.
+
+En desarrollo use `SMS_PROVIDER=mock` y el código configurado en `OTP_MOCK_CODE`
+(`00000` por defecto). En producción use `SMS_PROVIDER=twilio` junto con
+`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` y `TWILIO_VERIFY_SERVICE_SID`. La longitud
+configurada en Twilio Verify debe coincidir con `OTP_LENGTH`.
+
 ## Endpoints principales
 
 | Método | Ruta | Acceso |
 | --- | --- | --- |
 | POST | `/api/v1/auth/register` | Público |
 | POST | `/api/v1/auth/login` | Público |
+| POST | `/api/v1/auth/phone/send-otp` | Público con rate limit |
+| POST | `/api/v1/auth/phone/verify-otp` | Público |
+| POST | `/api/v1/auth/register-by-phone` | Público, OTP verificado |
+| POST | `/api/v1/auth/login-by-phone` | Público |
 | POST | `/api/v1/auth/forgot-password` | Público |
 | POST | `/api/v1/auth/reset-password` | Público |
 | POST | `/api/v1/auth/send-email-verification` | JWT |

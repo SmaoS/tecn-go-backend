@@ -69,6 +69,14 @@ app:
     credentials-base64: ${FIREBASE_CREDENTIALS_BASE64:}
   notifications:
     new-request-radius-km: ${NEW_REQUEST_NOTIFICATION_RADIUS_KM:25}
+  sms:
+    provider: ${SMS_PROVIDER:mock}
+    mock-code: ${OTP_MOCK_CODE:00000}
+    expose-debug-code: false
+    twilio:
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      verify-service-sid: ${TWILIO_VERIFY_SERVICE_SID:}
   parameters:
     quote-expiration-minutes: ${QUOTE_EXPIRATION_MINUTES:10}
     platform-commission-percentage: ${PLATFORM_COMMISSION_PERCENTAGE:0}
@@ -91,6 +99,11 @@ app:
     technician-low-balance-minimum: ${TECHNICIAN_LOW_BALANCE_MINIMUM:10000}
     technician-min-recharge-amount: ${TECHNICIAN_MIN_RECHARGE_AMOUNT:10000}
     technician-max-recharge-amount: ${TECHNICIAN_MAX_RECHARGE_AMOUNT:500000}
+    otp-expiration-minutes: ${OTP_EXPIRATION_MINUTES:5}
+    otp-length: ${OTP_LENGTH:5}
+    otp-max-attempts: ${OTP_MAX_ATTEMPTS:5}
+    otp-max-sends-per-phone: ${OTP_MAX_SENDS_PER_PHONE:3}
+    otp-max-sends-per-ip: ${OTP_MAX_SENDS_PER_IP:10}
   wompi:
     public-key: ${WOMPI_PUBLIC_KEY:}
     private-key: ${WOMPI_PRIVATE_KEY:}

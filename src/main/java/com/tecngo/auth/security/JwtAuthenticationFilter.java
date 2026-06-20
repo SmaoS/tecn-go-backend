@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -29,8 +31,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 String token = header.substring(7);
-                String email = jwtService.extractUsername(token);
-                users.findByEmailIgnoreCase(email).filter(user -> jwtService.isValid(token, user)).ifPresent(user -> {
+                String subject = jwtService.extractUsername(token);
+                findUser(subject).filter(user -> jwtService.isValid(token, user)).ifPresent(user -> {
                     var auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(auth);
@@ -40,5 +42,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         chain.doFilter(request, response);
+    }
+
+    private Optional<com.tecngo.users.entity.User> findUser(String subject) {
+        try {
+            return users.findById(UUID.fromString(subject));
+        } catch (IllegalArgumentException ignored) {
+            return users.findByEmailIgnoreCase(subject)
+                    .or(() -> users.findByPhoneNormalized(subject));
+        }
     }
 }

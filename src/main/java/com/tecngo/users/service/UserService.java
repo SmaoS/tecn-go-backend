@@ -16,6 +16,8 @@ import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.repository.UserRepository;
+import com.tecngo.phone_auth.service.PhoneNormalizer;
+import com.tecngo.shared.exception.ConflictException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,7 @@ public class UserService {
     private final PasswordResetTokenRepository passwordResetTokens;
     private final PasswordSecurityAuditRepository passwordAudits;
     private final GeographicCatalogService geographicCatalogs;
+    private final PhoneNormalizer phones;
 
     @Transactional
     public void updateFcmToken(User user, String token) {
@@ -67,7 +70,21 @@ public class UserService {
         String newCertificate = managedContent.validateChange(user.getCertificatePhotoUrl(),
                 request.certificatePhotoUrl(), user, Set.of(ContentAssetKind.CERTIFICATE));
         user.setFullName(request.fullName().trim());
-        user.setPhone(clean(request.phone()));
+        String requestedPhone = clean(request.phone());
+        if (requestedPhone != null) {
+            String normalizedPhone = phones.normalize(requestedPhone);
+            if (user.isPhoneVerified() && user.getPhoneNormalized() != null
+                    && !user.getPhoneNormalized().equals(normalizedPhone)) {
+                throw new ConflictException("Verify the new phone before replacing the current one");
+            }
+            users.findByPhoneNormalized(normalizedPhone)
+                    .filter(existing -> !existing.getId().equals(user.getId()))
+                    .ifPresent(existing -> {
+                        throw new ConflictException("Phone is already registered");
+                    });
+            user.setPhone(normalizedPhone);
+            user.setPhoneNormalized(normalizedPhone);
+        }
         user.setProfilePhotoUrl(newProfilePhoto);
         user.setDocumentPhotoUrl(newDocument);
         user.setCertificatePhotoUrl(newCertificate);

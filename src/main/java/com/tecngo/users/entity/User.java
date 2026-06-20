@@ -32,7 +32,7 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String fullName;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
 
     @Column(nullable = false)
@@ -68,6 +68,9 @@ public class User implements UserDetails {
 
     @Column(length = 30)
     private String phone;
+
+    @Column(length = 20, unique = true)
+    private String phoneNormalized;
 
     private Instant verifiedAt;
 
@@ -239,6 +242,8 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return email;
+        if (email != null && !email.isBlank()) return email;
+        if (phoneNormalized != null && !phoneNormalized.isBlank()) return phoneNormalized;
+        return id == null ? "" : id.toString();
     }
 }

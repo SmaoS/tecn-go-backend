@@ -10,6 +10,9 @@ spring:
 app:
   cors:
     allowed-origins: ${FRONTEND_URL:http://localhost:5173,http://localhost:8081}
+  sms:
+    provider: ${SMS_PROVIDER:mock}
+    expose-debug-code: true
 
 logging:
   level:

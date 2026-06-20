@@ -6,6 +6,7 @@ import java.util.List;
 
 public record OnboardingStatusResponse(
         boolean emailVerified,
+        boolean phoneVerified,
         boolean onboardingCompleted,
         OnboardingStep currentStep,
         List<OnboardingStep> requiredSteps,

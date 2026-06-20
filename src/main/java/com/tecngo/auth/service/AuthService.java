@@ -21,6 +21,10 @@ import com.tecngo.notifications.event.UserNotificationEvent;
 import com.tecngo.notifications.entity.NotificationType;
 import java.util.Map;
 import com.tecngo.referrals.service.ReferralService;
+import com.tecngo.phone_auth.dto.LoginByPhoneRequest;
+import com.tecngo.phone_auth.dto.RegisterByPhoneRequest;
+import com.tecngo.phone_auth.service.PhoneNormalizer;
+import com.tecngo.phone_auth.service.PhoneOtpService;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +37,8 @@ public class AuthService {
     private final EmailVerificationService emailVerificationService;
     private final ApplicationEventPublisher events;
     private final ReferralService referrals;
+    private final PhoneOtpService phoneOtps;
+    private final PhoneNormalizer phones;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -79,7 +85,47 @@ public class AuthService {
         return response(user);
     }
 
-    private AuthResponse response(User user) {
+    @Transactional
+    public AuthResponse registerByPhone(RegisterByPhoneRequest request) {
+        if (!request.password().equals(request.confirmPassword())) {
+            throw new IllegalArgumentException("Las contraseñas no coinciden");
+        }
+        if (request.role() == Role.ADMIN || request.role() == Role.VERIFIER) {
+            throw new IllegalArgumentException("This role cannot be registered publicly");
+        }
+        String phone = phones.normalize(request.phone());
+        if (users.existsByPhoneNormalized(phone)) {
+            throw new ConflictException("Phone is already registered");
+        }
+        phoneOtps.consume(phone, request.verificationToken());
+        User user = users.save(User.builder()
+                .fullName(request.fullName().trim())
+                .phone(phone)
+                .phoneNormalized(phone)
+                .phoneVerified(true)
+                .password(passwordEncoder.encode(request.password()))
+                .role(request.role())
+                .verificationStatus(VerificationStatus.CREATED)
+                .build());
+        referrals.register(user, request.referralCode());
+        events.publishEvent(new UserNotificationEvent(user.getId(), "Documentos legales pendientes",
+                "Lee y acepta los términos, políticas y recomendaciones para usar todas las funciones de TecnGo.",
+                NotificationType.LEGAL_ACCEPTANCE_REQUIRED,
+                Map.of("type", "LEGAL", "route", "Legal")));
+        return response(user);
+    }
+
+    public AuthResponse loginByPhone(LoginByPhoneRequest request) {
+        String phone = phones.normalize(request.phone());
+        User user = users.findByPhoneNormalized(phone)
+                .orElseThrow(() -> new UnauthorizedException("Celular o contraseña incorrectos"));
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new UnauthorizedException("Celular o contraseña incorrectos");
+        }
+        return response(user);
+    }
+
+    public AuthResponse response(User user) {
         return new AuthResponse(jwtService.generateToken(user), user.getId(), user.getFullName(),
                 user.getEmail(), user.getRole(), user.getEffectiveRoles(), user.getActiveMode(),
                 user.getVerificationStatus(),

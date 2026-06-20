@@ -29,3 +29,7 @@ app:
   email:
     verification-url: http://localhost:5173/verificar-correo
     require-verification: false
+  sms:
+    provider: mock
+    mock-code: "00000"
+    expose-debug-code: true

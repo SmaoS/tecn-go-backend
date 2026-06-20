@@ -22,6 +22,9 @@ app:
     require-verification: ${REQUIRE_EMAIL_VERIFICATION:true}
   onboarding:
     require-completion: ${REQUIRE_ONBOARDING_COMPLETION:true}
+  sms:
+    provider: ${SMS_PROVIDER:twilio}
+    expose-debug-code: false
   firebase:
     enabled: ${FIREBASE_ENABLED:false}
     project-id: ${FIREBASE_PROJECT_ID:}

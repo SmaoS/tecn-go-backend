@@ -37,6 +37,11 @@ public class SystemParameterService {
     public static final String TECHNICIAN_LOW_BALANCE_MINIMUM = "TECHNICIAN_LOW_BALANCE_MINIMUM";
     public static final String TECHNICIAN_MIN_RECHARGE_AMOUNT = "TECHNICIAN_MIN_RECHARGE_AMOUNT";
     public static final String TECHNICIAN_MAX_RECHARGE_AMOUNT = "TECHNICIAN_MAX_RECHARGE_AMOUNT";
+    public static final String OTP_EXPIRATION_MINUTES = "OTP_EXPIRATION_MINUTES";
+    public static final String OTP_LENGTH = "OTP_LENGTH";
+    public static final String OTP_MAX_ATTEMPTS = "OTP_MAX_ATTEMPTS";
+    public static final String OTP_MAX_SENDS_PER_PHONE = "OTP_MAX_SENDS_PER_PHONE";
+    public static final String OTP_MAX_SENDS_PER_IP = "OTP_MAX_SENDS_PER_IP";
 
     private final SystemParameterRepository repository;
 
@@ -112,6 +117,11 @@ public class SystemParameterService {
     public BigDecimal technicianLowBalanceMinimum() { return decimal(TECHNICIAN_LOW_BALANCE_MINIMUM, BigDecimal.valueOf(10000)); }
     public BigDecimal technicianMinRechargeAmount() { return decimal(TECHNICIAN_MIN_RECHARGE_AMOUNT, BigDecimal.valueOf(10000)); }
     public BigDecimal technicianMaxRechargeAmount() { return decimal(TECHNICIAN_MAX_RECHARGE_AMOUNT, BigDecimal.valueOf(500000)); }
+    public int otpExpirationMinutes() { return integer(OTP_EXPIRATION_MINUTES, 5); }
+    public int otpLength() { return integer(OTP_LENGTH, 5); }
+    public int otpMaxAttempts() { return integer(OTP_MAX_ATTEMPTS, 5); }
+    public int otpMaxSendsPerPhone() { return integer(OTP_MAX_SENDS_PER_PHONE, 3); }
+    public int otpMaxSendsPerIp() { return integer(OTP_MAX_SENDS_PER_IP, 10); }
 
     private boolean bool(String key, boolean fallback) {
         return repository.findByKeyAndActiveTrue(key)
@@ -168,6 +178,17 @@ public class SystemParameterService {
         if (parameter.getKey().equals(TECHNICIAN_MAX_RECHARGE_AMOUNT)
                 && number.compareTo(technicianMinRechargeAmount()) < 0) {
             throw new IllegalArgumentException("TECHNICIAN_MAX_RECHARGE_AMOUNT cannot be lower than minimum");
+        }
+        if (parameter.getKey().equals(OTP_LENGTH)
+                && (number.intValue() < 4 || number.intValue() > 8)) {
+            throw new IllegalArgumentException("OTP_LENGTH must be between 4 and 8");
+        }
+        if ((parameter.getKey().equals(OTP_EXPIRATION_MINUTES)
+                || parameter.getKey().equals(OTP_MAX_ATTEMPTS)
+                || parameter.getKey().equals(OTP_MAX_SENDS_PER_PHONE)
+                || parameter.getKey().equals(OTP_MAX_SENDS_PER_IP))
+                && number.intValue() < 1) {
+            throw new IllegalArgumentException(parameter.getKey() + " must be greater than zero");
         }
     }
 

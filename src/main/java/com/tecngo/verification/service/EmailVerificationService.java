@@ -41,6 +41,10 @@ public class EmailVerificationService {
 
     @Transactional
     public void send(User user) {
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            log.info("Verification email skipped for user {} because no email is registered", user.getId());
+            return;
+        }
         if (user.isEmailVerified()) {
             log.info("Verification email skipped for {} because the address is already verified", user.getEmail());
             return;
@@ -70,9 +74,9 @@ public class EmailVerificationService {
     }
 
     public void requireVerified(User user) {
-        if (requireVerification && !user.isEmailVerified()) {
-            throw new CodedForbiddenException("EMAIL_NOT_VERIFIED",
-                    "Debes confirmar tu correo electrónico para continuar.");
+        if (requireVerification && !user.isEmailVerified() && !user.isPhoneVerified()) {
+            throw new CodedForbiddenException("CONTACT_NOT_VERIFIED",
+                    "Debes confirmar tu correo electrónico o celular para continuar.");
         }
     }
 

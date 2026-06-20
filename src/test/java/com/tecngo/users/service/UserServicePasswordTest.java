@@ -19,7 +19,8 @@ class UserServicePasswordTest {
     private final UserService service = new UserService(
             users, mock(ManagedContentPolicy.class), encoder,
             mock(PasswordResetTokenRepository.class), mock(PasswordSecurityAuditRepository.class),
-            mock(com.tecngo.catalogs.service.GeographicCatalogService.class));
+            mock(com.tecngo.catalogs.service.GeographicCatalogService.class),
+            mock(com.tecngo.phone_auth.service.PhoneNormalizer.class));
 
     @Test
     void changePasswordValidatesCurrentPassword() {

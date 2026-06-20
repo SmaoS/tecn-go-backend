@@ -13,6 +13,7 @@ import com.tecngo.technicians.repository.TechnicianProfileRepository;
 import com.tecngo.users.dto.*;
 import com.tecngo.users.entity.*;
 import com.tecngo.users.repository.UserRepository;
+import com.tecngo.phone_auth.service.PhoneNormalizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,19 +32,29 @@ public class OnboardingService {
     private final LegalService legal;
     private final TechnicianProfileRepository technicianProfiles;
     private final ServiceCategoryService serviceCategories;
+    private final PhoneNormalizer phones;
 
     @Transactional(readOnly = true)
     public OnboardingStatusResponse status(User user) {
         OnboardingStep current = currentStep(user);
-        return new OnboardingStatusResponse(user.isEmailVerified(), user.isOnboardingCompleted(),
+        return new OnboardingStatusResponse(user.isEmailVerified(), user.isPhoneVerified(),
+                user.isOnboardingCompleted(),
                 current, requiredSteps(user), user.isOnboardingCompleted() ? "HOME" : null);
     }
 
     @Transactional
     public OnboardingStatusResponse mainData(User user, OnboardingMainDataRequest request) {
-        requireEmail(user);
+        requireContact(user);
         user.setFullName(request.fullName().trim());
-        user.setPhone(clean(request.phone()));
+        if (!blank(request.phone())) {
+            String normalizedPhone = phones.normalize(request.phone());
+            if (user.isPhoneVerified() && user.getPhoneNormalized() != null
+                    && !user.getPhoneNormalized().equals(normalizedPhone)) {
+                throw new ConflictException("Verify the new phone before replacing the current one");
+            }
+            user.setPhone(normalizedPhone);
+            user.setPhoneNormalized(normalizedPhone);
+        }
         var selection = geographicCatalogs.requireSelection(request.countryId(), request.departmentId(), request.cityId());
         user.setCountry(selection.country());
         user.setDepartment(selection.department());
@@ -60,7 +71,7 @@ public class OnboardingService {
 
     @Transactional
     public OnboardingStatusResponse legalAcceptance(User user) {
-        requireEmail(user);
+        requireContact(user);
         legal.acceptAll(user);
         user.setOnboardingStep(OnboardingStep.PROFILE_SELFIE);
         users.save(user);
@@ -69,7 +80,7 @@ public class OnboardingService {
 
     @Transactional
     public OnboardingStatusResponse profileSelfie(User user, ProfileSelfieRequest request) {
-        requireEmail(user);
+        requireContact(user);
         if (user.isProfileSelfieLocked()) {
             throw new ConflictException("Profile selfie is already locked");
         }
@@ -87,7 +98,7 @@ public class OnboardingService {
 
     @Transactional
     public OnboardingStatusResponse identityDocument(User user, IdentityDocumentRequest request) {
-        requireEmail(user);
+        requireContact(user);
         if (request.documentType() == DocumentType.CC) {
             if (blank(request.documentFrontUrl()) || blank(request.documentBackUrl())) {
                 throw new IllegalArgumentException("CC requires front and back document images");
@@ -188,7 +199,7 @@ public class OnboardingService {
 
     @Transactional
     public OnboardingStatusResponse complete(User user) {
-        requireEmail(user);
+        requireContact(user);
         OnboardingStep current = currentStep(user);
         if (current != OnboardingStep.COMPLETED) {
             throw new ConflictException("Onboarding step " + current + " is pending");
@@ -201,7 +212,7 @@ public class OnboardingService {
 
     @Transactional
     public OnboardingStatusResponse autoComplete(User user) {
-        requireEmail(user);
+        requireContact(user);
         if (currentStep(user) != OnboardingStep.COMPLETED) {
             throw new ConflictException("Onboarding step " + currentStep(user) + " is pending");
         }
@@ -263,12 +274,14 @@ public class OnboardingService {
         user.setOnboardingStep(OnboardingStep.COMPLETED);
     }
 
-    private void requireEmail(User user) {
-        if (!user.isEmailVerified()) throw new ForbiddenException("Email verification is required");
+    private void requireContact(User user) {
+        if (!user.isEmailVerified() && !user.isPhoneVerified()) {
+            throw new ForbiddenException("Email or phone verification is required");
+        }
     }
 
     private void requireTechnician(User user) {
-        requireEmail(user);
+        requireContact(user);
         if (user.getRole() != Role.TECHNICIAN) throw new ForbiddenException("Technician role is required");
     }
 
