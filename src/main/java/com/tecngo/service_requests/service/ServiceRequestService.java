@@ -172,31 +172,64 @@ public class ServiceRequestService {
     }
 
     @Transactional(readOnly = true)
-    public List<ServiceRequestResponse> available(User technician, double radiusKm) {
+    public List<ServiceRequestResponse> available(User technician, UUID requestedCityId,
+                                                  UUID requestedCategoryId, Boolean requestedUseRadius,
+                                                  Double requestedRadiusKm) {
         requireRole(technician, Role.TECHNICIAN);
         userAccess.requireActive(technician);
         emailVerification.requireVerified(technician);
-        if (radiusKm <= 0 || radiusKm > 100) {
-            throw new IllegalArgumentException("radiusKm must be greater than 0 and at most 100");
-        }
         var profile = technicianProfiles.approvedProfile(technician);
         List<UUID> categoryIds = profile.getCategories().stream().map(item -> item.getId()).toList();
+        if (categoryIds.isEmpty()) {
+            throw new ConflictException("Technician categories are required");
+        }
+        if (requestedCategoryId != null && !categoryIds.contains(requestedCategoryId)) {
+            throw new ForbiddenException("Technician does not support the selected category");
+        }
+        var searchCity = requestedCityId != null
+                ? geographicCatalogs.requireCity(requestedCityId)
+                : technician.getCity();
+
+        boolean useRadius = requestedUseRadius != null
+                ? requestedUseRadius
+                : requestedRadiusKm != null || parameters.serviceSearchUseRadius();
+        Double radiusKm = null;
+        if (useRadius) {
+            double maxRadiusKm = parameters.serviceSearchMaxRadiusKm().doubleValue();
+            radiusKm = requestedRadiusKm == null
+                    ? parameters.serviceSearchDefaultRadiusKm().doubleValue()
+                    : requestedRadiusKm;
+            if (radiusKm <= 0 || radiusKm > maxRadiusKm) {
+                throw new IllegalArgumentException(
+                        "radiusKm must be greater than 0 and at most " + maxRadiusKm);
+            }
+        }
+
         var liveLocation = technicianLocations.findByTechnicianId(technician.getId()).orElse(null);
         Double originLatitude = liveLocation != null && liveLocation.isOnline()
                 ? liveLocation.getLatitude() : profile.getLatitude();
         Double originLongitude = liveLocation != null && liveLocation.isOnline()
                 ? liveLocation.getLongitude() : profile.getLongitude();
-        if (originLatitude == null || originLongitude == null) {
+        if (useRadius && (originLatitude == null || originLongitude == null)) {
             throw new ConflictException("Technician GPS location is required");
         }
-        return requests.findAvailable(RequestStatus.QUOTE_PENDING, categoryIds).stream()
+
+        Double activeRadiusKm = radiusKm;
+        List<ServiceRequest> availableRequests = searchCity == null
+                ? requests.findAvailableWithoutCity(
+                        RequestStatus.QUOTE_PENDING, categoryIds, requestedCategoryId)
+                : requests.findAvailable(RequestStatus.QUOTE_PENDING, searchCity.getId(),
+                        categoryIds, requestedCategoryId);
+        return availableRequests.stream()
                 .filter(item -> !item.getClient().getId().equals(technician.getId()))
-                .filter(item -> technician.getCity() == null || item.getCity() == null
-                        || technician.getCity().getId().equals(item.getCity().getId()))
-                .map(item -> map(item, distance.kilometers(originLatitude, originLongitude,
+                .map(item -> map(item, calculateDistance(originLatitude, originLongitude,
                         item.getLatitude(), item.getLongitude()), true))
-                .filter(item -> item.distanceKm() <= radiusKm)
-                .sorted(Comparator.comparing(ServiceRequestResponse::distanceKm))
+                .filter(item -> !useRadius
+                        || item.distanceKm() != null && item.distanceKm() <= activeRadiusKm)
+                .sorted(Comparator
+                        .comparing(ServiceRequestResponse::distanceKm,
+                                Comparator.nullsLast(Double::compareTo))
+                        .thenComparing(ServiceRequestResponse::createdAt, Comparator.reverseOrder()))
                 .toList();
     }
 
@@ -587,6 +620,16 @@ public class ServiceRequestService {
     private Double approximateCoordinate(Double coordinate) {
         if (coordinate == null) return null;
         return Math.round(coordinate * 100.0) / 100.0;
+    }
+
+    private Double calculateDistance(Double originLatitude, Double originLongitude,
+                                     Double destinationLatitude, Double destinationLongitude) {
+        if (originLatitude == null || originLongitude == null
+                || destinationLatitude == null || destinationLongitude == null) {
+            return null;
+        }
+        return distance.kilometers(originLatitude, originLongitude,
+                destinationLatitude, destinationLongitude);
     }
 
     private ServiceRequest find(UUID id) {

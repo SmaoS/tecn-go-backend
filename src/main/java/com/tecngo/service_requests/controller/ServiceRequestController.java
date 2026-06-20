@@ -69,9 +69,12 @@ public class ServiceRequestController {
     @GetMapping("/available")
     @PreAuthorize("hasRole('TECHNICIAN')")
     public List<ServiceRequestResponse> available(
-            @RequestParam(defaultValue = "10") double radiusKm,
+            @RequestParam(required = false) java.util.UUID cityId,
+            @RequestParam(required = false) java.util.UUID categoryId,
+            @RequestParam(required = false) Boolean useRadius,
+            @RequestParam(required = false) Double radiusKm,
             @AuthenticationPrincipal User user) {
-        return service.available(user, radiusKm);
+        return service.available(user, cityId, categoryId, useRadius, radiusKm);
     }
 
     @PutMapping("/{id}/quote")

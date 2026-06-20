@@ -22,13 +22,27 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
             select distinct request from ServiceRequest request
             join request.category category
             where request.status = :status
-              and request.latitude is not null
-              and request.longitude is not null
+              and request.city.id = :cityId
               and category.id in :categoryIds
-            order by request.createdAt asc
+              and (:categoryId is null or category.id = :categoryId)
+            order by request.createdAt desc
             """)
     List<ServiceRequest> findAvailable(@Param("status") RequestStatus status,
-                                       @Param("categoryIds") List<UUID> categoryIds);
+                                       @Param("cityId") UUID cityId,
+                                       @Param("categoryIds") List<UUID> categoryIds,
+                                       @Param("categoryId") UUID categoryId);
+
+    @Query("""
+            select distinct request from ServiceRequest request
+            join request.category category
+            where request.status = :status
+              and category.id in :categoryIds
+              and (:categoryId is null or category.id = :categoryId)
+            order by request.createdAt desc
+            """)
+    List<ServiceRequest> findAvailableWithoutCity(@Param("status") RequestStatus status,
+                                                  @Param("categoryIds") List<UUID> categoryIds,
+                                                  @Param("categoryId") UUID categoryId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select request from ServiceRequest request where request.id = :id")

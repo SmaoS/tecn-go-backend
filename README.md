@@ -144,7 +144,8 @@ configurada en Twilio Verify debe coincidir con `OTP_LENGTH`.
 | GET | `/api/v1/service-requests/mine` | JWT |
 | PUT | `/api/v1/service-requests/{id}/publish` | CLIENT propietario |
 | GET | `/api/v1/service-requests/available` | TECHNICIAN aprobado |
-| GET | `/api/v1/service-requests/available?radiusKm=10` | TECHNICIAN aprobado |
+| GET | `/api/v1/service-requests/available?categoryId={id}` | TECHNICIAN aprobado |
+| GET | `/api/v1/service-requests/available?useRadius=true&radiusKm=10` | TECHNICIAN aprobado |
 | PUT | `/api/v1/service-requests/{id}/quote` | TECHNICIAN aprobado |
 | GET | `/api/v1/service-requests/{id}/quotes` | CLIENT propietario |
 | PUT | `/api/v1/service-requests/{id}/confirm-quote` | CLIENT propietario |
@@ -228,8 +229,25 @@ Técnico de celulares, Aire acondicionado, Cámaras de seguridad, Internet / red
 Cerrajería. Los técnicos seleccionan una o más categorías.
 
 Las solicitudes nuevas requieren dirección, latitud y longitud. El endpoint de
-disponibles usa Haversine, filtra por categorías del técnico y acepta radios de 1 a
-100 km.
+disponibles busca primero en la ciudad del técnico y filtra por sus categorías. Puede
+recibir `cityId` y `categoryId`; el técnico solo puede consultar categorías asociadas
+a su perfil. El filtro Haversine es opcional mediante `useRadius=true`, con radio
+predeterminado y máximo configurables.
+
+Para compatibilidad, los perfiles antiguos sin ciudad conservan temporalmente la
+búsqueda por categoría. En ese caso, enviar `radiusKm` activa el filtro geográfico
+como ocurría en versiones anteriores. La migración intenta completar `city_id` de
+solicitudes existentes desde el perfil del cliente.
+
+Antes de que el cliente acepte una cotización, la lista disponible expone únicamente
+una zona aproximada: dirección parcial y coordenadas redondeadas. La dirección y las
+coordenadas exactas se entregan en el detalle solo a los participantes del servicio.
+
+Parámetros administrables:
+
+- `SERVICE_SEARCH_USE_RADIUS=false`
+- `SERVICE_SEARCH_DEFAULT_RADIUS_KM=10`
+- `SERVICE_SEARCH_MAX_RADIUS_KM=50`
 
 Cada técnico aprobado puede tener una sola cotización pendiente por solicitud. Una
 cotización expira según `QUOTE_EXPIRATION_MINUTES`; después de rechazo o expiración el

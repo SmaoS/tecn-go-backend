@@ -42,6 +42,9 @@ public class SystemParameterService {
     public static final String OTP_MAX_ATTEMPTS = "OTP_MAX_ATTEMPTS";
     public static final String OTP_MAX_SENDS_PER_PHONE = "OTP_MAX_SENDS_PER_PHONE";
     public static final String OTP_MAX_SENDS_PER_IP = "OTP_MAX_SENDS_PER_IP";
+    public static final String SERVICE_SEARCH_USE_RADIUS = "SERVICE_SEARCH_USE_RADIUS";
+    public static final String SERVICE_SEARCH_DEFAULT_RADIUS_KM = "SERVICE_SEARCH_DEFAULT_RADIUS_KM";
+    public static final String SERVICE_SEARCH_MAX_RADIUS_KM = "SERVICE_SEARCH_MAX_RADIUS_KM";
 
     private final SystemParameterRepository repository;
 
@@ -61,6 +64,12 @@ public class SystemParameterService {
     private boolean requireLegalFallback;
     @Value("${app.parameters.require-profile-face-detection:false}")
     private boolean requireFaceDetectionFallback;
+    @Value("${app.parameters.service-search-use-radius:false}")
+    private boolean serviceSearchUseRadiusFallback;
+    @Value("${app.parameters.service-search-default-radius-km:10}")
+    private BigDecimal serviceSearchDefaultRadiusFallback;
+    @Value("${app.parameters.service-search-max-radius-km:50}")
+    private BigDecimal serviceSearchMaxRadiusFallback;
 
     @Transactional(readOnly = true)
     public List<SystemParameterResponse> list() {
@@ -122,6 +131,15 @@ public class SystemParameterService {
     public int otpMaxAttempts() { return integer(OTP_MAX_ATTEMPTS, 5); }
     public int otpMaxSendsPerPhone() { return integer(OTP_MAX_SENDS_PER_PHONE, 3); }
     public int otpMaxSendsPerIp() { return integer(OTP_MAX_SENDS_PER_IP, 10); }
+    public boolean serviceSearchUseRadius() {
+        return bool(SERVICE_SEARCH_USE_RADIUS, serviceSearchUseRadiusFallback);
+    }
+    public BigDecimal serviceSearchDefaultRadiusKm() {
+        return decimal(SERVICE_SEARCH_DEFAULT_RADIUS_KM, serviceSearchDefaultRadiusFallback);
+    }
+    public BigDecimal serviceSearchMaxRadiusKm() {
+        return decimal(SERVICE_SEARCH_MAX_RADIUS_KM, serviceSearchMaxRadiusFallback);
+    }
 
     private boolean bool(String key, boolean fallback) {
         return repository.findByKeyAndActiveTrue(key)
@@ -189,6 +207,21 @@ public class SystemParameterService {
                 || parameter.getKey().equals(OTP_MAX_SENDS_PER_IP))
                 && number.intValue() < 1) {
             throw new IllegalArgumentException(parameter.getKey() + " must be greater than zero");
+        }
+        if ((parameter.getKey().equals(SERVICE_SEARCH_DEFAULT_RADIUS_KM)
+                || parameter.getKey().equals(SERVICE_SEARCH_MAX_RADIUS_KM))
+                && number.signum() <= 0) {
+            throw new IllegalArgumentException(parameter.getKey() + " must be greater than zero");
+        }
+        if (parameter.getKey().equals(SERVICE_SEARCH_DEFAULT_RADIUS_KM)
+                && number.compareTo(serviceSearchMaxRadiusKm()) > 0) {
+            throw new IllegalArgumentException(
+                    "SERVICE_SEARCH_DEFAULT_RADIUS_KM cannot be greater than maximum");
+        }
+        if (parameter.getKey().equals(SERVICE_SEARCH_MAX_RADIUS_KM)
+                && number.compareTo(serviceSearchDefaultRadiusKm()) < 0) {
+            throw new IllegalArgumentException(
+                    "SERVICE_SEARCH_MAX_RADIUS_KM cannot be lower than default radius");
         }
     }
 
