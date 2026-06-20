@@ -2,6 +2,7 @@ package com.tecngo.service_requests.dto;
 
 import com.tecngo.service_requests.entity.RequestStatus;
 import com.tecngo.payments.entity.PaymentMethod;
+import com.tecngo.geolocation.LocationPrecision;
 
 import java.time.Instant;
 import java.math.BigDecimal;
@@ -16,7 +17,8 @@ public record ServiceRequestResponse(
         List<String> technicianCategories,
         boolean certifiedTechnician,
         UUID categoryId, String categoryName, String description, String address,
-        Double latitude, Double longitude, Double distanceKm, BigDecimal estimatedPrice,
+        Double latitude, Double longitude, LocationPrecision locationPrecision,
+        Double distanceKm, BigDecimal estimatedPrice,
         BigDecimal technicianPrice, BigDecimal finalPrice, PaymentMethod requestedPaymentMethod,
         RequestStatus status, Instant createdAt,
         long serviceImagesCount, String firstServiceImageUrl, List<ServiceRequestImageResponse> images,

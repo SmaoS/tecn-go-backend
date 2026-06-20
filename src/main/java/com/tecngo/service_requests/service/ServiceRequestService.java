@@ -11,6 +11,7 @@ import com.tecngo.service_requests.entity.QuoteStatus;
 import com.tecngo.service_requests.entity.ServiceQuote;
 import com.tecngo.services.service.ServiceCategoryService;
 import com.tecngo.geolocation.HaversineDistance;
+import com.tecngo.geolocation.LocationPrecision;
 import com.tecngo.notifications.entity.NotificationType;
 import com.tecngo.notifications.event.UserNotificationEvent;
 import com.tecngo.payments.entity.Payment;
@@ -563,6 +564,7 @@ public class ServiceRequestService {
                 approximateLocation ? approximate(item.getAddress()) : item.getAddress(),
                 approximateLocation ? approximateCoordinate(item.getLatitude()) : item.getLatitude(),
                 approximateLocation ? approximateCoordinate(item.getLongitude()) : item.getLongitude(),
+                approximateLocation ? LocationPrecision.APPROXIMATE : LocationPrecision.EXACT,
                 distanceKm, item.getEstimatedPrice(),
                 item.getTechnicianPrice(), item.getFinalPrice(), item.getRequestedPaymentMethod(),
                 item.getStatus(), item.getCreatedAt(),

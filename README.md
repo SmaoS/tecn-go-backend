@@ -242,6 +242,18 @@ solicitudes existentes desde el perfil del cliente.
 Antes de que el cliente acepte una cotización, la lista disponible expone únicamente
 una zona aproximada: dirección parcial y coordenadas redondeadas. La dirección y las
 coordenadas exactas se entregan en el detalle solo a los participantes del servicio.
+El mismo criterio se aplica a `/technicians/nearby`: sus marcadores son aproximados.
+Las respuestas incluyen `locationPrecision` con valor `APPROXIMATE` o `EXACT`.
+
+## Polling y notificaciones push
+
+FCM actúa como señal inmediata y el polling conserva la API como fuente de verdad.
+Cada push incluye `notificationType`, `requestId` y `route` cuando corresponda. La
+aplicación móvil usa esos datos para invalidar únicamente las consultas relacionadas.
+
+El polling estándar es de 10 segundos y el chat de 5 segundos. Mobile lo ejecuta solo
+cuando la aplicación está activa y la pantalla correspondiente tiene foco. Al volver
+desde segundo plano o recuperar el foco, TanStack Query refresca los datos obsoletos.
 
 Parámetros administrables:
 

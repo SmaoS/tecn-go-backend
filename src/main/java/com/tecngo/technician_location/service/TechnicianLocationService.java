@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import com.tecngo.geolocation.HaversineDistance;
+import com.tecngo.geolocation.LocationPrecision;
 import com.tecngo.technicians.entity.TechnicianStatus;
 
 @Service
@@ -86,8 +87,9 @@ public class TechnicianLocationService {
                         item.getTechnician().getProfilePhotoUrl(),
                         item.getTechnician().getAverageRating(),
                         item.getTechnician().getCompletedServicesCount(),
-                        item.getLatitude(),
-                        item.getLongitude(),
+                        approximateCoordinate(item.getLatitude()),
+                        approximateCoordinate(item.getLongitude()),
+                        LocationPrecision.APPROXIMATE,
                         distance.kilometers(latitude, longitude, item.getLatitude(), item.getLongitude()),
                         item.getUpdatedAt()))
                 .filter(item -> item.distanceKm() <= radiusKm)
@@ -119,6 +121,11 @@ public class TechnicianLocationService {
         boolean online = item.isOnline() && !item.getUpdatedAt().isBefore(threshold);
         return new TechnicianLocationResponse(item.getTechnician().getId(),
                 item.getTechnician().getFullName(), item.getLatitude(), item.getLongitude(),
+                LocationPrecision.EXACT,
                 item.getAccuracy(), item.getSpeed(), item.getHeading(), online, item.getUpdatedAt());
+    }
+
+    private double approximateCoordinate(double coordinate) {
+        return Math.round(coordinate * 100.0) / 100.0;
     }
 }

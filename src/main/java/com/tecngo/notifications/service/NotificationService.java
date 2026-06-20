@@ -16,6 +16,8 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -65,7 +67,9 @@ public class NotificationService {
                 .route(event.data().get("route"))
                 .requestId(parseUuid(event.data().get("requestId")))
                 .build());
-        pushNotifications.sendPush(user.getId(), event.title(), event.message(), event.data());
+        Map<String, String> pushData = new HashMap<>(event.data());
+        pushData.put("notificationType", event.type().name());
+        pushNotifications.sendPush(user.getId(), event.title(), event.message(), Map.copyOf(pushData));
     }
 
     private NotificationResponse map(Notification item) {

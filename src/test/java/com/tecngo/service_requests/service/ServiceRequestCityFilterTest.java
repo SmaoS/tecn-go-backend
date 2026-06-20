@@ -1,6 +1,7 @@
 package com.tecngo.service_requests.service;
 
 import com.tecngo.catalogs.entity.City;
+import com.tecngo.geolocation.LocationPrecision;
 import com.tecngo.service_requests.entity.RequestStatus;
 import com.tecngo.service_requests.entity.ServiceRequest;
 import com.tecngo.service_requests.repository.ServiceRequestRepository;
@@ -67,6 +68,8 @@ class ServiceRequestCityFilterTest {
         assertThat(result).extracting("id").containsExactly(nearby.getId(), farther.getId());
         assertThat(result).extracting("cityName").containsOnly("Villavicencio");
         assertThat(result).extracting("address").containsOnly("ciudad");
+        assertThat(result).extracting("locationPrecision")
+                .containsOnly(LocationPrecision.APPROXIMATE);
         assertThat(result.getFirst().latitude()).isEqualTo(4.11);
         assertThat(result.getFirst().longitude()).isEqualTo(-73.61);
         assertThat(result.getLast().latitude()).isEqualTo(4.12);

@@ -2,6 +2,7 @@ package com.tecngo.notifications.service;
 
 import com.tecngo.notifications.entity.Notification;
 import com.tecngo.notifications.entity.NotificationType;
+import com.tecngo.notifications.event.UserNotificationEvent;
 import com.tecngo.notifications.repository.NotificationRepository;
 import com.tecngo.shared.exception.ForbiddenException;
 import com.tecngo.users.entity.User;
@@ -9,6 +10,7 @@ import com.tecngo.users.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -56,5 +58,28 @@ class NotificationServiceTest {
         assertThatThrownBy(() -> service.delete(notificationId, requester))
                 .isInstanceOf(ForbiddenException.class);
         verify(notifications, never()).delete(any());
+    }
+
+    @Test
+    void pushPayloadIncludesNotificationTypeForClientSynchronization() {
+        UUID userId = UUID.randomUUID();
+        UUID requestId = UUID.randomUUID();
+        User user = User.builder().id(userId).build();
+        when(users.findById(userId)).thenReturn(Optional.of(user));
+
+        service.onNotification(new UserNotificationEvent(
+                userId,
+                "Nueva cotización recibida",
+                "Tienes una nueva oferta",
+                NotificationType.NEW_QUOTE,
+                Map.of("requestId", requestId.toString(), "route", "RequestDetail")));
+
+        verify(pushNotifications).sendPush(
+                eq(userId),
+                eq("Nueva cotización recibida"),
+                eq("Tienes una nueva oferta"),
+                argThat(data -> data.get("notificationType").equals("NEW_QUOTE")
+                        && data.get("requestId").equals(requestId.toString())
+                        && data.get("route").equals("RequestDetail")));
     }
 }
