@@ -211,6 +211,14 @@ public class User implements UserDetails {
         return getEffectiveRoles().contains(expectedRole);
     }
 
+    public boolean isActiveAs(Role expectedRole) {
+        if (!hasRole(expectedRole)) return false;
+        if (expectedRole == Role.CLIENT || expectedRole == Role.TECHNICIAN) {
+            return activeMode == null ? role == expectedRole : activeMode.asRole() == expectedRole;
+        }
+        return role == expectedRole;
+    }
+
     public void addRole(Role newRole) {
         if (roles == null) roles = new LinkedHashSet<>();
         roles.add(newRole);

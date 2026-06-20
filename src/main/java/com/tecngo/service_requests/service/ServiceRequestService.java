@@ -119,13 +119,13 @@ public class ServiceRequestService {
 
     @Transactional(readOnly = true)
     public List<ServiceRequestResponse> mine(User user) {
-        if (user.getRole() == Role.CLIENT) {
+        if (user.isActiveAs(Role.CLIENT)) {
             return requests.findByClientIdOrderByCreatedAtDesc(user.getId()).stream().map(this::map).toList();
         }
-        if (user.getRole() == Role.TECHNICIAN) {
+        if (user.isActiveAs(Role.TECHNICIAN)) {
             return requests.findByTechnicianIdOrderByCreatedAtDesc(user.getId()).stream().map(this::map).toList();
         }
-        throw new ForbiddenException("This role does not own service requests");
+        throw new ForbiddenException("An active client or technician mode is required");
     }
 
     @Transactional(readOnly = true)
@@ -190,6 +190,7 @@ public class ServiceRequestService {
             throw new ConflictException("Technician GPS location is required");
         }
         return requests.findAvailable(RequestStatus.QUOTE_PENDING, categoryIds).stream()
+                .filter(item -> !item.getClient().getId().equals(technician.getId()))
                 .filter(item -> technician.getCity() == null || item.getCity() == null
                         || technician.getCity().getId().equals(item.getCity().getId()))
                 .map(item -> map(item, distance.kilometers(originLatitude, originLongitude,
@@ -204,13 +205,15 @@ public class ServiceRequestService {
         requireRole(technician, Role.TECHNICIAN);
         requireCriticalAccess(technician);
         emailVerification.requireVerified(technician);
-        var profile = technicianProfiles.approvedProfile(technician);
-        wallets.requireCanQuote(technician);
         ServiceRequest request = requests.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Service request not found"));
+        requireDifferentUser(request.getClient(), technician,
+                "You cannot quote your own service request");
         if (request.getStatus() != RequestStatus.QUOTE_PENDING) {
             throw new ConflictException("Service request is no longer available");
         }
+        var profile = technicianProfiles.approvedProfile(technician);
+        wallets.requireCanQuote(technician);
         boolean supportsCategory = profile.getCategories().stream()
                 .anyMatch(category -> category.getId().equals(request.getCategory().getId()));
         if (!supportsCategory) throw new ForbiddenException("Technician does not support this category");
@@ -260,6 +263,8 @@ public class ServiceRequestService {
         if (!selected.getServiceRequest().getId().equals(id) || selected.getStatus() != QuoteStatus.PENDING) {
             throw new ConflictException("Quote is not available for this service request");
         }
+        requireDifferentUser(client, selected.getTechnician(),
+                "You cannot accept a quote created by your own account");
         if (!selected.getExpiresAt().isAfter(Instant.now())) {
             selected.setStatus(QuoteStatus.EXPIRED);
             selected.setRespondedAt(Instant.now());
@@ -298,6 +303,8 @@ public class ServiceRequestService {
 
     @Transactional
     public ServiceQuoteResponse rejectQuote(UUID requestId, UUID quoteId, User client) {
+        requireRole(client, Role.CLIENT);
+        requireCriticalAccess(client);
         ServiceRequest request = requests.findByIdForUpdate(requestId)
                 .orElseThrow(() -> new NotFoundException("Service request not found"));
         requireClientOwner(request, client);
@@ -322,7 +329,7 @@ public class ServiceRequestService {
     public ServiceRequestResponse updateStatus(UUID id, RequestStatus nextStatus, User user) {
         requireCriticalAccess(user);
         ServiceRequest request = find(id);
-        if (nextStatus == RequestStatus.CANCELLED && user.getRole() == Role.CLIENT) {
+        if (nextStatus == RequestStatus.CANCELLED && user.isActiveAs(Role.CLIENT)) {
             requireClientOwner(request, user);
             if (request.getStatus() == RequestStatus.COMPLETED || request.getStatus() == RequestStatus.PAID
                     || request.getStatus() == RequestStatus.CANCELLED) {
@@ -587,7 +594,12 @@ public class ServiceRequestService {
     }
 
     private void requireRole(User user, Role role) {
-        if (user.getRole() != role) throw new ForbiddenException("Role " + role + " is required");
+        if (!user.hasRole(role)) {
+            throw new ForbiddenException("Role " + role + " is required");
+        }
+        if ((role == Role.CLIENT || role == Role.TECHNICIAN) && !user.isActiveAs(role)) {
+            throw new ForbiddenException("Active mode " + role + " is required");
+        }
     }
 
     private void requireCriticalAccess(User user) {
@@ -604,6 +616,12 @@ public class ServiceRequestService {
     private void requireAssignedTechnician(ServiceRequest request, User user) {
         if (request.getTechnician() == null || !request.getTechnician().getId().equals(user.getId())) {
             throw new ForbiddenException("Only the assigned technician can update this request");
+        }
+    }
+
+    private void requireDifferentUser(User first, User second, String message) {
+        if (first.getId().equals(second.getId())) {
+            throw new ForbiddenException(message);
         }
     }
 

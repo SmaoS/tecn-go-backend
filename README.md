@@ -64,6 +64,22 @@ El JWT incluye:
 La respuesta de autenticación conserva `role` y añade `roles` y `activeMode`. Los
 cambios futuros de modo se registran en `user_active_mode_audits`.
 
+Una cuenta que posea ambas capacidades puede cambiar el modo operativo con:
+
+```http
+PUT /api/v1/users/me/active-mode
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "mode": "TECHNICIAN"
+}
+```
+
+La respuesta entrega un JWT renovado. Las operaciones de cliente y técnico validan
+tanto la capacidad como el modo activo. Una misma cuenta no puede cotizar su propia
+solicitud, aceptar su propia cotización ni calificarse a sí misma.
+
 El registro público solo permite `CLIENT` y `TECHNICIAN`; los verificadores se crean
 desde el panel administrativo. En desarrollo se crea este administrador si todavía no
 existe:

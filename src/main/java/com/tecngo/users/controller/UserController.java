@@ -5,7 +5,10 @@ import com.tecngo.users.dto.ChangePasswordRequest;
 import com.tecngo.password_recovery.dto.PasswordMessageResponse;
 import com.tecngo.users.dto.UserProfileRequest;
 import com.tecngo.users.dto.UserProfileResponse;
+import com.tecngo.users.dto.ActiveModeResponse;
+import com.tecngo.users.dto.ChangeActiveModeRequest;
 import com.tecngo.users.entity.User;
+import com.tecngo.users.service.ActiveModeService;
 import com.tecngo.users.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService service;
+    private final ActiveModeService activeModes;
 
     @PutMapping("/me/fcm-token")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -41,5 +45,11 @@ public class UserController {
     public PasswordMessageResponse changePassword(@Valid @RequestBody ChangePasswordRequest request,
                                                   @AuthenticationPrincipal User user) {
         return service.changePassword(user, request);
+    }
+
+    @PutMapping("/me/active-mode")
+    public ActiveModeResponse changeActiveMode(@Valid @RequestBody ChangeActiveModeRequest request,
+                                               @AuthenticationPrincipal User user) {
+        return activeModes.change(user, request.mode());
     }
 }

@@ -46,14 +46,20 @@ public class RatingService {
             throw new ConflictException("Only paid services can be rated");
         }
         if (request.getTechnician() == null) throw new ConflictException("Service request has no technician");
+        if (request.getClient().getId().equals(request.getTechnician().getId())) {
+            throw new ForbiddenException("A user cannot rate their own account");
+        }
         User ratedUser;
-        if (rater.getRole() == Role.CLIENT && request.getClient().getId().equals(rater.getId())) {
+        if (rater.isActiveAs(Role.CLIENT) && request.getClient().getId().equals(rater.getId())) {
             ratedUser = request.getTechnician();
-        } else if (rater.getRole() == Role.TECHNICIAN
+        } else if (rater.isActiveAs(Role.TECHNICIAN)
                 && request.getTechnician().getId().equals(rater.getId())) {
             ratedUser = request.getClient();
         } else {
             throw new ForbiddenException("Only service participants can rate each other");
+        }
+        if (ratedUser.getId().equals(rater.getId())) {
+            throw new ForbiddenException("You cannot rate your own account");
         }
         if (ratings.existsByServiceRequestIdAndRaterId(requestId, rater.getId())) {
             throw new ConflictException("You already rated this service");
@@ -105,7 +111,7 @@ public class RatingService {
 
     private User requireTechnician(UUID id) {
         User user = users.findById(id).orElseThrow(() -> new NotFoundException("Technician not found"));
-        if (user.getRole() != Role.TECHNICIAN) throw new NotFoundException("Technician not found");
+        if (!user.hasRole(Role.TECHNICIAN)) throw new NotFoundException("Technician not found");
         return user;
     }
 
