@@ -1,8 +1,8 @@
 package com.tecngo.users.service;
 
 import com.tecngo.auth.service.JwtService;
-import com.tecngo.shared.exception.ForbiddenException;
 import com.tecngo.users.entity.ActiveMode;
+import com.tecngo.users.entity.OnboardingStep;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.repository.UserRepository;
@@ -15,7 +15,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 class ActiveModeServiceTest {
@@ -50,27 +49,56 @@ class ActiveModeServiceTest {
         assertThat(response.token()).isEqualTo("refreshed-token");
         assertThat(response.activeMode()).isEqualTo(ActiveMode.TECHNICIAN);
         assertThat(response.roles()).containsExactlyInAnyOrder(Role.CLIENT, Role.TECHNICIAN);
+        assertThat(response.roleCreated()).isFalse();
         verify(users).save(user);
         verify(audits).record(user, user, ActiveMode.CLIENT, ActiveMode.TECHNICIAN,
                 "USER_MODE_CHANGE");
     }
 
     @Test
-    void rejectsModeWithoutCapability() {
+    void createsMissingTechnicianCapabilityAndRequiresOnboarding() {
         UUID id = UUID.randomUUID();
         User user = User.builder()
                 .id(id)
                 .role(Role.CLIENT)
                 .activeMode(ActiveMode.CLIENT)
+                .onboardingCompleted(true)
+                .onboardingStep(OnboardingStep.COMPLETED)
                 .build();
         when(users.findById(id)).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(user)).thenReturn("technician-token");
 
-        assertThatThrownBy(() -> service.change(user, ActiveMode.TECHNICIAN))
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessageContaining("does not have");
+        var response = service.change(user, ActiveMode.TECHNICIAN);
 
-        verify(users, never()).save(any());
-        verifyNoInteractions(audits, jwtService);
+        assertThat(response.roleCreated()).isTrue();
+        assertThat(response.roles()).containsExactlyInAnyOrder(Role.CLIENT, Role.TECHNICIAN);
+        assertThat(response.onboardingCompleted()).isFalse();
+        assertThat(response.onboardingStep()).isEqualTo(OnboardingStep.TECHNICIAN_PROFESSIONAL_PROFILE);
+        assertThat(user.getActiveMode()).isEqualTo(ActiveMode.TECHNICIAN);
+        verify(users).save(user);
+        verify(audits).record(user, user, ActiveMode.CLIENT, ActiveMode.TECHNICIAN,
+                "USER_CAPABILITY_CREATED_AND_MODE_CHANGED");
+    }
+
+    @Test
+    void createsMissingClientCapabilityWithoutResettingCompletedOnboarding() {
+        UUID id = UUID.randomUUID();
+        User user = User.builder()
+                .id(id)
+                .role(Role.TECHNICIAN)
+                .activeMode(ActiveMode.TECHNICIAN)
+                .onboardingCompleted(true)
+                .onboardingStep(OnboardingStep.COMPLETED)
+                .build();
+        when(users.findById(id)).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(user)).thenReturn("client-token");
+
+        var response = service.change(user, ActiveMode.CLIENT);
+
+        assertThat(response.roleCreated()).isTrue();
+        assertThat(response.onboardingCompleted()).isTrue();
+        assertThat(response.onboardingStep()).isEqualTo(OnboardingStep.COMPLETED);
+        assertThat(response.activeMode()).isEqualTo(ActiveMode.CLIENT);
     }
 
     @Test
@@ -87,6 +115,7 @@ class ActiveModeServiceTest {
         var response = service.change(user, ActiveMode.CLIENT);
 
         assertThat(response.activeMode()).isEqualTo(ActiveMode.CLIENT);
+        assertThat(response.roleCreated()).isFalse();
         verify(users, never()).save(any());
         verifyNoInteractions(audits);
     }

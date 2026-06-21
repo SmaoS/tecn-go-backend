@@ -15,6 +15,7 @@ import com.tecngo.technicians.repository.TechnicianProfileRepository;
 import com.tecngo.users.dto.CertificateRequest;
 import com.tecngo.users.dto.TechnicianProfessionalProfileRequest;
 import com.tecngo.users.entity.DocumentType;
+import com.tecngo.users.entity.ActiveMode;
 import com.tecngo.users.entity.OnboardingStep;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
@@ -64,6 +65,28 @@ class OnboardingServiceProfessionalProfileTest {
         assertThat(profile.getDescription()).isEqualTo(technician.getWorkExperienceDescription());
         verify(technicianProfiles).save(profile);
         verify(users).save(technician);
+    }
+
+    @Test
+    void clientPrimaryRoleCanCompleteTechnicianProfileInTechnicianMode() {
+        User technician = readyTechnician();
+        technician.setRole(Role.CLIENT);
+        technician.addRole(Role.TECHNICIAN);
+        technician.setActiveMode(ActiveMode.TECHNICIAN);
+        UUID categoryId = UUID.randomUUID();
+        ServiceCategory category = ServiceCategory.builder()
+                .id(categoryId).name("Electricista").slug("electricista").active(true).build();
+        TechnicianProfile profile = TechnicianProfile.builder().user(technician).build();
+        when(serviceCategories.requireActive(categoryId)).thenReturn(category);
+        when(technicianProfiles.findByUserId(technician.getId())).thenReturn(Optional.of(profile));
+        when(legal.status(technician)).thenReturn(new LegalStatusResponse(true, List.of(), List.of(), true, false));
+
+        var result = service.professionalProfile(technician,
+                new TechnicianProfessionalProfileRequest(Set.of(categoryId),
+                        "Tengo más de cinco años instalando y reparando redes eléctricas residenciales."));
+
+        assertThat(result.currentStep()).isEqualTo(OnboardingStep.TECHNICIAN_CERTIFICATE);
+        assertThat(profile.getCategories()).containsExactly(category);
     }
 
     @Test

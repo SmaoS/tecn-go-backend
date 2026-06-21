@@ -96,7 +96,8 @@ public class ContentModerationService {
             var request = image.getServiceRequest();
             return request.getClient().getId().equals(viewer.getId())
                     || request.getTechnician() != null && request.getTechnician().getId().equals(viewer.getId())
-                    || viewer.getRole() == Role.TECHNICIAN && request.getStatus() == RequestStatus.QUOTE_PENDING;
+                    || viewer.isActiveAs(Role.TECHNICIAN)
+                    && request.getStatus() == RequestStatus.QUOTE_PENDING;
         }
         var evidence = evidences.findByContentAssetId(asset.getId()).orElse(null);
         if (evidence != null) return participant(evidence.getServiceRequest().getClient(),

@@ -34,7 +34,7 @@ public class TechnicianWalletService {
 
     @Transactional
     public TechnicianWallet ensureWallet(User technician) {
-        if (technician.getRole() != Role.TECHNICIAN) {
+        if (!technician.hasRole(Role.TECHNICIAN)) {
             throw new ForbiddenException("Technician role is required");
         }
         return wallets.findByTechnicianId(technician.getId())
@@ -161,7 +161,7 @@ public class TechnicianWalletService {
         requireAdmin(admin);
         User technician = users.findById(technicianId)
                 .orElseThrow(() -> new NotFoundException("Technician not found"));
-        if (technician.getRole() != Role.TECHNICIAN) throw new ForbiddenException("Technician role is required");
+        if (!technician.hasRole(Role.TECHNICIAN)) throw new ForbiddenException("Technician role is required");
         return map(wallets.findByTechnicianId(technicianId)
                 .orElseGet(() -> TechnicianWallet.builder()
                         .technician(technician).balance(BigDecimal.ZERO).currency("COP").build()));
@@ -174,7 +174,7 @@ public class TechnicianWalletService {
         if (amount == null || amount.signum() == 0) throw new IllegalArgumentException("Amount must be different from zero");
         User technician = users.findById(technicianId)
                 .orElseThrow(() -> new NotFoundException("Technician not found"));
-        if (technician.getRole() != Role.TECHNICIAN) throw new ForbiddenException("Technician role is required");
+        if (!technician.hasRole(Role.TECHNICIAN)) throw new ForbiddenException("Technician role is required");
         TechnicianWallet wallet = wallets.findByTechnicianIdForUpdate(technicianId)
                 .orElseGet(() -> ensureWallet(technician));
         return map(transaction(wallet, WalletTransactionType.ADMIN_ADJUSTMENT, amount,
@@ -242,7 +242,7 @@ public class TechnicianWalletService {
     }
 
     private void requireTechnician(User user) {
-        if (user.getRole() != Role.TECHNICIAN) throw new ForbiddenException("Technician role is required");
+        if (!user.isActiveAs(Role.TECHNICIAN)) throw new ForbiddenException("Technician mode is required");
     }
 
     private void requireAdmin(User user) {

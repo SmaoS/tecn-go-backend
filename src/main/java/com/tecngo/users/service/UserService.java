@@ -54,7 +54,7 @@ public class UserService {
     @Transactional
     public UserProfileResponse updateProfile(User authenticatedUser, UserProfileRequest request) {
         User user = profileUser(authenticatedUser);
-        if (user.getRole() == Role.TECHNICIAN
+        if (user.isActiveAs(Role.TECHNICIAN)
                 && (request.workExperienceDescription() == null
                 || request.workExperienceDescription().isBlank())) {
             throw new IllegalArgumentException("Work experience description is required for technicians");
@@ -97,7 +97,7 @@ public class UserService {
         user.setHomeNeighborhood(clean(request.homeNeighborhood()));
         applyGeographicSelection(user, request.countryId(), request.departmentId(), request.cityId(),
                 request.homeCity());
-        if (user.getRole() == Role.TECHNICIAN && user.getHomeAddress() == null) {
+        if (user.isActiveAs(Role.TECHNICIAN) && user.getHomeAddress() == null) {
             throw new IllegalArgumentException("Home address is required for technicians");
         }
         if (!java.util.Objects.equals(previousProfilePhoto, newProfilePhoto)) {

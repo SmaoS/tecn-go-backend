@@ -41,10 +41,10 @@ public class ServiceEvidenceService {
                 ContentAssetKind.SERVICE_EVIDENCE, user);
         var stored = result.stored();
         ServiceEvidence evidence = evidences.save(ServiceEvidence.builder().serviceRequest(request).uploadedBy(user)
-                .uploadedByRole(user.getRole()).evidenceType(type).fileUrl(stored.accessUrl())
+                .uploadedByRole(activeParticipantRole(user)).evidenceType(type).fileUrl(stored.accessUrl())
                 .publicId(stored.publicId()).contentAsset(result.asset())
                 .description(clean(description)).build());
-        if (user.getRole() == Role.TECHNICIAN) {
+        if (user.isActiveAs(Role.TECHNICIAN)) {
             events.publishEvent(new UserNotificationEvent(
                     request.getClient().getId(),
                     "Nueva evidencia recibida",
@@ -91,8 +91,11 @@ public class ServiceEvidenceService {
                 || request.getTechnician() != null && request.getTechnician().getId().equals(user.getId());
         boolean staff = allowStaff && (user.getRole() == Role.ADMIN || user.getRole() == Role.VERIFIER);
         if (!participant && !staff) throw new ForbiddenException("Service evidence is private");
-        if (participant && user.getRole() != Role.CLIENT && user.getRole() != Role.TECHNICIAN)
+        if (participant && !user.isActiveAs(Role.CLIENT) && !user.isActiveAs(Role.TECHNICIAN))
             throw new ForbiddenException("Only clients and technicians can upload evidence");
+    }
+    private Role activeParticipantRole(User user) {
+        return user.isActiveAs(Role.TECHNICIAN) ? Role.TECHNICIAN : Role.CLIENT;
     }
     private ServiceEvidenceResponse map(ServiceEvidence item) {
         return new ServiceEvidenceResponse(item.getId(), item.getServiceRequest().getId(),

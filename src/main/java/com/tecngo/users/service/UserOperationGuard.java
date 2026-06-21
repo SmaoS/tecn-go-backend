@@ -22,7 +22,7 @@ public class UserOperationGuard {
         }
         if (isOnboardingAllowed(method, path)) return;
         if (requireOnboardingCompletion && !user.isOnboardingCompleted()) {
-            if (user.getRole() == Role.TECHNICIAN) {
+            if (user.isActiveAs(Role.TECHNICIAN)) {
                 throw new CodedForbiddenException("TECHNICIAN_PROFILE_INCOMPLETE",
                         "Completa tu perfil técnico para poder operar.");
             }

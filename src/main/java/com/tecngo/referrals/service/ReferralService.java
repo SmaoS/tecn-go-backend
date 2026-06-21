@@ -29,7 +29,9 @@ public class ReferralService {
 
     @Transactional
     public ReferralCode ensureCode(User technician) {
-        if (technician.getRole() != Role.TECHNICIAN) throw new IllegalArgumentException("Referral codes are only for technicians");
+        if (!technician.isActiveAs(Role.TECHNICIAN)) {
+            throw new IllegalArgumentException("Referral codes are only for active technician mode");
+        }
         return codes.findByTechnicianId(technician.getId()).orElseGet(() -> codes.save(ReferralCode.builder()
                 .technician(technician).code(nextCode()).active(true).build()));
     }

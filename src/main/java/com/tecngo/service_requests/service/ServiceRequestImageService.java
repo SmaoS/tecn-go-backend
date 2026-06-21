@@ -59,7 +59,7 @@ public class ServiceRequestImageService {
         ServiceRequest request = requireRequest(requestId);
         boolean participant = request.getClient().getId().equals(user.getId())
                 || request.getTechnician() != null && request.getTechnician().getId().equals(user.getId())
-                || user.getRole() == Role.TECHNICIAN && request.getStatus() == RequestStatus.QUOTE_PENDING
+                || user.isActiveAs(Role.TECHNICIAN) && request.getStatus() == RequestStatus.QUOTE_PENDING
                 || user.getRole() == Role.ADMIN;
         if (!participant) throw new ForbiddenException("Service images are only visible to participants");
         return images.findByServiceRequestIdOrderByCreatedAtAsc(requestId).stream()
@@ -80,7 +80,7 @@ public class ServiceRequestImageService {
     }
 
     private void requireOwnerBeforeAcceptance(ServiceRequest request, User client) {
-        if (client.getRole() != Role.CLIENT || !request.getClient().getId().equals(client.getId())) {
+        if (!client.isActiveAs(Role.CLIENT) || !request.getClient().getId().equals(client.getId())) {
             throw new ForbiddenException("Only the client owner can modify service images");
         }
         if (request.getStatus() != RequestStatus.QUOTE_PENDING) {

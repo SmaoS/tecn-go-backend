@@ -49,7 +49,7 @@ public class PaymentProofService {
         PaymentProof proof = proofs.save(PaymentProof.builder().serviceRequest(request).uploadedBy(user)
                 .fileUrl(stored.accessUrl()).publicId(stored.publicId()).amount(amount)
                 .contentAsset(result.asset()).paymentMethod(method).build());
-        if (user.getRole() == Role.CLIENT && request.getTechnician() != null) {
+        if (user.isActiveAs(Role.CLIENT) && request.getTechnician() != null) {
             notifyUser(request.getTechnician(), request, "Nuevo comprobante de pago recibido",
                     user.getFullName() + " subió un comprobante de pago",
                     NotificationType.PAYMENT_PROOF_UPLOADED);
@@ -102,7 +102,7 @@ public class PaymentProofService {
     private void requireParticipant(ServiceRequest request, User user) {
         boolean participant = request.getClient().getId().equals(user.getId())
                 || request.getTechnician() != null && request.getTechnician().getId().equals(user.getId());
-        if (!participant || user.getRole() != Role.CLIENT && user.getRole() != Role.TECHNICIAN)
+        if (!participant || !user.isActiveAs(Role.CLIENT) && !user.isActiveAs(Role.TECHNICIAN))
             throw new ForbiddenException("Only service participants can manage payment proofs");
     }
     private void requireReviewer(User user) {

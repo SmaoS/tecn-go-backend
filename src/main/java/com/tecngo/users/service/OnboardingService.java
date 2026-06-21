@@ -127,7 +127,7 @@ public class OnboardingService {
                 ? IdentityDocumentCaptureStatus.MANUAL_REVIEW_REQUIRED : request.identityDocumentCaptureStatus());
         user.setDocumentsVerified(false);
         user.setVerificationStatus(VerificationStatus.PENDING_VERIFICATION);
-        if (user.getRole() == Role.TECHNICIAN) {
+        if (isTechnicianMode(user)) {
             user.setOnboardingStep(OnboardingStep.TECHNICIAN_PROFESSIONAL_PROFILE);
         } else {
             markCompleted(user);
@@ -234,10 +234,10 @@ public class OnboardingService {
         if (user.getDocumentType() == DocumentType.PASSPORT && blank(user.getDocumentSingleUrl())) {
             return OnboardingStep.IDENTITY_DOCUMENT;
         }
-        if (user.getRole() == Role.TECHNICIAN && !hasProfessionalProfile(user)) {
+        if (isTechnicianMode(user) && !hasProfessionalProfile(user)) {
             return OnboardingStep.TECHNICIAN_PROFESSIONAL_PROFILE;
         }
-        if (user.getRole() == Role.TECHNICIAN && user.getOnboardingStep() == OnboardingStep.TECHNICIAN_CERTIFICATE) {
+        if (isTechnicianMode(user) && user.getOnboardingStep() == OnboardingStep.TECHNICIAN_CERTIFICATE) {
             return OnboardingStep.TECHNICIAN_CERTIFICATE;
         }
         return OnboardingStep.COMPLETED;
@@ -246,7 +246,7 @@ public class OnboardingService {
     private List<OnboardingStep> requiredSteps(User user) {
         List<OnboardingStep> steps = new ArrayList<>(List.of(OnboardingStep.MAIN_DATA,
                 OnboardingStep.LEGAL_ACCEPTANCE, OnboardingStep.PROFILE_SELFIE, OnboardingStep.IDENTITY_DOCUMENT));
-        if (user.getRole() == Role.TECHNICIAN) {
+        if (isTechnicianMode(user)) {
             steps.add(OnboardingStep.TECHNICIAN_PROFESSIONAL_PROFILE);
             steps.add(OnboardingStep.TECHNICIAN_CERTIFICATE);
         }
@@ -282,7 +282,11 @@ public class OnboardingService {
 
     private void requireTechnician(User user) {
         requireContact(user);
-        if (user.getRole() != Role.TECHNICIAN) throw new ForbiddenException("Technician role is required");
+        if (!isTechnicianMode(user)) throw new ForbiddenException("Technician mode is required");
+    }
+
+    private boolean isTechnicianMode(User user) {
+        return user.isActiveAs(Role.TECHNICIAN);
     }
 
     private String clean(String value) { return blank(value) ? null : value.trim(); }

@@ -43,8 +43,6 @@ class ActiveModeIntegrationTest {
         String email = "dual-mode-" + UUID.randomUUID() + "@tecngo.local";
         JsonNode session = register(email);
         var user = users.findByEmailIgnoreCase(email).orElseThrow();
-        user.addRole(Role.TECHNICIAN);
-        users.saveAndFlush(user);
 
         String responseBody = mvc.perform(put("/v1/users/me/active-mode")
                         .header("Authorization", bearer(session))
@@ -56,6 +54,9 @@ class ActiveModeIntegrationTest {
                 .andExpect(jsonPath("$.role").value("CLIENT"))
                 .andExpect(jsonPath("$.roles[0]").exists())
                 .andExpect(jsonPath("$.activeMode").value("TECHNICIAN"))
+                .andExpect(jsonPath("$.roleCreated").value(true))
+                .andExpect(jsonPath("$.onboardingCompleted").value(false))
+                .andExpect(jsonPath("$.onboardingStep").value("TECHNICIAN_PROFESSIONAL_PROFILE"))
                 .andExpect(jsonPath("$.token").isNotEmpty())
                 .andReturn().getResponse().getContentAsString();
 
@@ -65,26 +66,40 @@ class ActiveModeIntegrationTest {
                 .containsExactly("CLIENT", "TECHNICIAN");
         assertThat(users.findById(user.getId()).orElseThrow().getActiveMode())
                 .isEqualTo(ActiveMode.TECHNICIAN);
+        assertThat(users.findById(user.getId()).orElseThrow().getEffectiveRoles())
+                .containsExactlyInAnyOrder(Role.CLIENT, Role.TECHNICIAN);
         assertThat(audits.findByUserIdOrderByCreatedAtDesc(user.getId()))
                 .singleElement()
                 .satisfies(audit -> {
                     assertThat(audit.getPreviousMode()).isEqualTo(ActiveMode.CLIENT);
                     assertThat(audit.getNewMode()).isEqualTo(ActiveMode.TECHNICIAN);
-                    assertThat(audit.getReason()).isEqualTo("USER_MODE_CHANGE");
+                    assertThat(audit.getReason()).isEqualTo("USER_CAPABILITY_CREATED_AND_MODE_CHANGED");
                 });
     }
 
     @Test
-    void rejectsModeWhenAccountDoesNotHaveCapability() throws Exception {
+    void switchingBackUsesCreatedCapabilityWithoutCreatingAnotherAudit() throws Exception {
         JsonNode session = register("single-mode-" + UUID.randomUUID() + "@tecngo.local");
 
-        mvc.perform(put("/v1/users/me/active-mode")
+        String technicianBody = mvc.perform(put("/v1/users/me/active-mode")
                         .header("Authorization", bearer(session))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"mode":"TECHNICIAN"}
                                 """))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode technicianSession = objectMapper.readTree(technicianBody);
+        mvc.perform(put("/v1/users/me/active-mode")
+                        .header("Authorization", "Bearer " + technicianSession.get("token").asText())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"mode":"CLIENT"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roleCreated").value(false))
+                .andExpect(jsonPath("$.activeMode").value("CLIENT"));
     }
 
     private JsonNode register(String email) throws Exception {

@@ -65,7 +65,7 @@ public class UserAccessService {
 
     private User requireManagedUser(UUID id) {
         User target = users.findById(id).orElseThrow(() -> new NotFoundException("User not found"));
-        if (target.getRole() != Role.CLIENT && target.getRole() != Role.TECHNICIAN) {
+        if (!target.hasRole(Role.CLIENT) && !target.hasRole(Role.TECHNICIAN)) {
             throw new ForbiddenException("Only clients and technicians can be inactivated");
         }
         return target;
