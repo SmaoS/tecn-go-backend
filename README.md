@@ -473,3 +473,35 @@ PUT  /v1/admin/chat-moderation/messages/{messageId}/sanction
 
 `ADMIN` y `VERIFIER` revisan mensajes. La sanción de cuenta permanece restringida a
 `ADMIN` y registra el motivo como riesgo de seguridad.
+
+## Paginación y diagnóstico SQL
+
+Los historiales de solicitudes usan endpoints paginados con un máximo de 100 registros
+por página:
+
+```text
+GET /v1/service-requests/my/page?activeOnly=true&page=0&size=20
+GET /v1/service-requests/my/history/page?page=0&size=20
+GET /v1/service-requests/my-assigned/page?activeOnly=true&page=0&size=20
+GET /v1/service-requests/my-assigned/history/page?page=0&size=20
+```
+
+Notificaciones y chat aceptan `after` en formato ISO-8601 para polling incremental.
+Sin `after`, retornan únicamente los últimos 50 y 100 elementos respectivamente.
+
+Para diagnosticar SQL temporalmente:
+
+```env
+HIBERNATE_GENERATE_STATISTICS=true
+HIBERNATE_STAT_LOG_LEVEL=INFO
+HIBERNATE_SLOW_QUERY_MS=250
+```
+
+No se recomienda mantener estadísticas Hibernate activas permanentemente en
+producción. La migración `V34` agrega índices para historiales, solicitudes por ciudad,
+notificaciones, chat e imágenes. Para una consulta problemática use además
+`EXPLAIN (ANALYZE, BUFFERS)` en una réplica o entorno de pruebas.
+
+La búsqueda por cercanía evalúa como máximo `AVAILABLE_REQUEST_CANDIDATE_LIMIT=500`
+solicitudes recientes antes de ordenar con Haversine. Este límite mantiene acotado el
+costo hasta una futura migración del cálculo geográfico a PostGIS.

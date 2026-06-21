@@ -22,8 +22,10 @@ public class ChatController {
 
     @GetMapping
     public List<ChatMessageResponse> messages(@PathVariable UUID requestId,
+                                              @RequestParam(required = false) java.time.Instant after,
+                                              @RequestParam(defaultValue = "100") int limit,
                                               @AuthenticationPrincipal User user) {
-        return service.messages(requestId, user);
+        return service.messages(requestId, user, after, limit);
     }
 
     @PostMapping("/messages")

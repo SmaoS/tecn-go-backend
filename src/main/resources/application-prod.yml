@@ -47,3 +47,4 @@ logging:
     root: INFO
     com.tecngo: INFO
     org.hibernate.SQL: WARN
+    org.hibernate.stat: ${HIBERNATE_STAT_LOG_LEVEL:OFF}

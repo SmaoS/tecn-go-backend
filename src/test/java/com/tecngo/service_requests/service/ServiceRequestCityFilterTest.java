@@ -24,6 +24,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class ServiceRequestCityFilterTest {
@@ -56,11 +58,15 @@ class ServiceRequestCityFilterTest {
         ServiceRequest nearby = request(category, city, client, 4.1137, -73.6138);
         when(technicianProfiles.approvedProfile(technician)).thenReturn(profile);
         when(technicianLocations.findByTechnicianId(technician.getId())).thenReturn(java.util.Optional.empty());
-        when(requests.findAvailable(RequestStatus.QUOTE_PENDING, city.getId(),
-                List.of(category.getId()), null)).thenReturn(List.of(farther, nearby));
+        when(requests.findAvailable(org.mockito.ArgumentMatchers.eq(RequestStatus.QUOTE_PENDING),
+                org.mockito.ArgumentMatchers.eq(city.getId()),
+                org.mockito.ArgumentMatchers.eq(List.of(category.getId())),
+                org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(List.of(farther, nearby));
         when(distance.kilometers(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
                 .thenReturn(8.0, 2.0);
-        when(images.findByServiceRequestIdOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.any()))
+        when(images.findByServiceRequestIdInOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(List.of());
 
         var result = service.available(technician, null, null, false, null);
@@ -74,6 +80,8 @@ class ServiceRequestCityFilterTest {
         assertThat(result.getFirst().longitude()).isEqualTo(-73.61);
         assertThat(result.getLast().latitude()).isEqualTo(4.12);
         assertThat(result.getLast().longitude()).isEqualTo(-73.62);
+        verify(images, times(1)).findByServiceRequestIdInOrderByCreatedAtAsc(
+                org.mockito.ArgumentMatchers.anyList());
     }
 
     @Test
@@ -91,11 +99,15 @@ class ServiceRequestCityFilterTest {
         when(geographicCatalogs.requireCity(city.getId())).thenReturn(city);
         when(technicianLocations.findByTechnicianId(technician.getId())).thenReturn(java.util.Optional.empty());
         when(parameters.serviceSearchMaxRadiusKm()).thenReturn(BigDecimal.valueOf(50));
-        when(requests.findAvailable(RequestStatus.QUOTE_PENDING, city.getId(),
-                List.of(category.getId()), category.getId())).thenReturn(List.of(farther, nearby));
+        when(requests.findAvailable(org.mockito.ArgumentMatchers.eq(RequestStatus.QUOTE_PENDING),
+                org.mockito.ArgumentMatchers.eq(city.getId()),
+                org.mockito.ArgumentMatchers.eq(List.of(category.getId())),
+                org.mockito.ArgumentMatchers.eq(category.getId()),
+                org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(List.of(farther, nearby));
         when(distance.kilometers(anyDouble(), anyDouble(), anyDouble(), anyDouble()))
                 .thenReturn(20.0, 2.0);
-        when(images.findByServiceRequestIdOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.any()))
+        when(images.findByServiceRequestIdInOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(List.of());
 
         var result = service.available(technician, city.getId(), category.getId(), true, 10.0);
@@ -115,10 +127,14 @@ class ServiceRequestCityFilterTest {
         when(technicianProfiles.approvedProfile(technician)).thenReturn(profile);
         when(technicianLocations.findByTechnicianId(technician.getId())).thenReturn(java.util.Optional.empty());
         when(parameters.serviceSearchMaxRadiusKm()).thenReturn(BigDecimal.valueOf(50));
-        when(requests.findAvailableWithoutCity(RequestStatus.QUOTE_PENDING,
-                List.of(category.getId()), null)).thenReturn(List.of(request));
+        when(requests.findAvailableWithoutCity(
+                org.mockito.ArgumentMatchers.eq(RequestStatus.QUOTE_PENDING),
+                org.mockito.ArgumentMatchers.eq(List.of(category.getId())),
+                org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(List.of(request));
         when(distance.kilometers(anyDouble(), anyDouble(), anyDouble(), anyDouble())).thenReturn(2.0);
-        when(images.findByServiceRequestIdOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.any()))
+        when(images.findByServiceRequestIdInOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(List.of());
 
         var result = service.available(technician, null, null, null, 10.0);

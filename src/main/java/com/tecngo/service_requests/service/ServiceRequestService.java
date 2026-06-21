@@ -41,6 +41,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import com.tecngo.system_parameters.service.SystemParameterService;
 import com.tecngo.technician_wallet.service.TechnicianWalletService;
 import com.tecngo.technician_location.repository.TechnicianLocationRepository;
@@ -56,6 +60,9 @@ import java.text.NumberFormat;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Set;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -90,6 +97,8 @@ public class ServiceRequestService {
     private final TechnicianWalletService wallets;
     @Value("${app.notifications.new-request-radius-km:25}")
     private double newRequestRadiusKm;
+    @Value("${app.performance.available-request-candidate-limit:500}")
+    private int availableRequestCandidateLimit;
 
     @Transactional
     public ServiceRequestResponse create(CreateServiceRequest request, User client) {
@@ -121,10 +130,10 @@ public class ServiceRequestService {
     @Transactional(readOnly = true)
     public List<ServiceRequestResponse> mine(User user) {
         if (user.isActiveAs(Role.CLIENT)) {
-            return requests.findByClientIdOrderByCreatedAtDesc(user.getId()).stream().map(this::map).toList();
+            return clientRequestsPage(user, false, 0, 50).getContent();
         }
         if (user.isActiveAs(Role.TECHNICIAN)) {
-            return requests.findByTechnicianIdOrderByCreatedAtDesc(user.getId()).stream().map(this::map).toList();
+            return assignedRequestsPage(user, false, 0, 50).getContent();
         }
         throw new ForbiddenException("An active client or technician mode is required");
     }
@@ -132,34 +141,70 @@ public class ServiceRequestService {
     @Transactional(readOnly = true)
     public List<ServiceRequestResponse> clientRequests(User user, boolean activeOnly) {
         requireRole(user, Role.CLIENT);
-        return (activeOnly
+        List<ServiceRequest> items = activeOnly
                 ? requests.findByClientIdAndStatusInOrderByCreatedAtDesc(user.getId(), CLIENT_ACTIVE_STATUSES)
-                : requests.findByClientIdOrderByCreatedAtDesc(user.getId()))
-                .stream().map(this::map).toList();
+                : requests.findByClientIdOrderByCreatedAtDesc(user.getId());
+        return mapAll(items.stream().limit(50).toList(), Map.of(), false);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ServiceRequestResponse> clientRequestsPage(User user, boolean activeOnly, int page, int size) {
+        requireRole(user, Role.CLIENT);
+        var pageable = pageRequest(page, size);
+        Page<ServiceRequest> result = activeOnly
+                ? requests.findPageByClientIdAndStatusIn(user.getId(), CLIENT_ACTIVE_STATUSES, pageable)
+                : requests.findPageByClientId(user.getId(), pageable);
+        return mapPage(result);
     }
 
     @Transactional(readOnly = true)
     public List<ServiceRequestResponse> clientHistory(User user) {
         requireRole(user, Role.CLIENT);
-        return requests.findByClientIdAndStatusInOrderByCreatedAtDesc(user.getId(), HISTORY_STATUSES)
-                .stream().map(this::map).toList();
+        return mapAll(requests.findByClientIdAndStatusInOrderByCreatedAtDesc(
+                user.getId(), HISTORY_STATUSES).stream().limit(50).toList(), Map.of(), false);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ServiceRequestResponse> clientHistoryPage(User user, int page, int size) {
+        requireRole(user, Role.CLIENT);
+        return mapPage(requests.findPageByClientIdAndStatusIn(
+                user.getId(), HISTORY_STATUSES, pageRequest(page, size)));
     }
 
     @Transactional(readOnly = true)
     public List<ServiceRequestResponse> assignedRequests(User user, boolean activeOnly) {
         requireRole(user, Role.TECHNICIAN);
-        return (activeOnly
+        List<ServiceRequest> items = activeOnly
                 ? requests.findByTechnicianIdAndStatusInOrderByCreatedAtDesc(
                         user.getId(), TECHNICIAN_ACTIVE_STATUSES)
-                : requests.findByTechnicianIdOrderByCreatedAtDesc(user.getId()))
-                .stream().map(this::map).toList();
+                : requests.findByTechnicianIdOrderByCreatedAtDesc(user.getId());
+        return mapAll(items.stream().limit(50).toList(), Map.of(), false);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ServiceRequestResponse> assignedRequestsPage(User user, boolean activeOnly,
+                                                              int page, int size) {
+        requireRole(user, Role.TECHNICIAN);
+        var pageable = pageRequest(page, size);
+        Page<ServiceRequest> result = activeOnly
+                ? requests.findPageByTechnicianIdAndStatusIn(
+                        user.getId(), TECHNICIAN_ACTIVE_STATUSES, pageable)
+                : requests.findPageByTechnicianId(user.getId(), pageable);
+        return mapPage(result);
     }
 
     @Transactional(readOnly = true)
     public List<ServiceRequestResponse> assignedHistory(User user) {
         requireRole(user, Role.TECHNICIAN);
-        return requests.findByTechnicianIdAndStatusInOrderByCreatedAtDesc(user.getId(), HISTORY_STATUSES)
-                .stream().map(this::map).toList();
+        return mapAll(requests.findByTechnicianIdAndStatusInOrderByCreatedAtDesc(
+                user.getId(), HISTORY_STATUSES).stream().limit(50).toList(), Map.of(), false);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ServiceRequestResponse> assignedHistoryPage(User user, int page, int size) {
+        requireRole(user, Role.TECHNICIAN);
+        return mapPage(requests.findPageByTechnicianIdAndStatusIn(
+                user.getId(), HISTORY_STATUSES, pageRequest(page, size)));
     }
 
     @Transactional(readOnly = true)
@@ -216,22 +261,43 @@ public class ServiceRequestService {
         }
 
         Double activeRadiusKm = radiusKm;
+        var candidates = PageRequest.of(0,
+                availableRequestCandidateLimit > 0 ? Math.min(availableRequestCandidateLimit, 2000) : 500);
         List<ServiceRequest> availableRequests = searchCity == null
                 ? requests.findAvailableWithoutCity(
-                        RequestStatus.QUOTE_PENDING, categoryIds, requestedCategoryId)
+                        RequestStatus.QUOTE_PENDING, categoryIds, requestedCategoryId, candidates)
                 : requests.findAvailable(RequestStatus.QUOTE_PENDING, searchCity.getId(),
-                        categoryIds, requestedCategoryId);
-        return availableRequests.stream()
+                        categoryIds, requestedCategoryId, candidates);
+        Map<UUID, Double> distances = new HashMap<>();
+        availableRequests.forEach(item -> {
+            Double value = calculateDistance(originLatitude, originLongitude,
+                    item.getLatitude(), item.getLongitude());
+            if (value != null) distances.put(item.getId(), value);
+        });
+        List<ServiceRequest> sorted = availableRequests.stream()
                 .filter(item -> !item.getClient().getId().equals(technician.getId()))
-                .map(item -> map(item, calculateDistance(originLatitude, originLongitude,
-                        item.getLatitude(), item.getLongitude()), true))
-                .filter(item -> !useRadius
-                        || item.distanceKm() != null && item.distanceKm() <= activeRadiusKm)
+                .filter(item -> !useRadius || distances.containsKey(item.getId())
+                        && distances.get(item.getId()) <= activeRadiusKm)
                 .sorted(Comparator
-                        .comparing(ServiceRequestResponse::distanceKm,
+                        .comparing((ServiceRequest item) -> distances.get(item.getId()),
                                 Comparator.nullsLast(Double::compareTo))
-                        .thenComparing(ServiceRequestResponse::createdAt, Comparator.reverseOrder()))
+                        .thenComparing(ServiceRequest::getCreatedAt, Comparator.reverseOrder()))
                 .toList();
+        return mapAll(sorted, distances, true);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ServiceRequestResponse> availablePage(
+            User technician, UUID requestedCityId, UUID requestedCategoryId,
+            Boolean requestedUseRadius, Double requestedRadiusKm, int page, int size) {
+        List<ServiceRequestResponse> items = available(technician, requestedCityId,
+                requestedCategoryId, requestedUseRadius, requestedRadiusKm);
+        int boundedSize = Math.max(1, Math.min(size, 100));
+        int boundedPage = Math.max(0, page);
+        int from = Math.min(boundedPage * boundedSize, items.size());
+        int to = Math.min(from + boundedSize, items.size());
+        return new PageImpl<>(items.subList(from, to), PageRequest.of(boundedPage, boundedSize),
+                items.size());
     }
 
     @Transactional
@@ -330,8 +396,14 @@ public class ServiceRequestService {
         ServiceRequest request = find(id);
         requireRole(client, Role.CLIENT);
         requireClientOwner(request, client);
-        return quotes.findByServiceRequestIdOrderByCreatedAtAsc(id).stream()
-                .map(this::mapQuote)
+        List<ServiceQuote> items = quotes.findByServiceRequestIdOrderByCreatedAtAsc(id);
+        Map<UUID, List<String>> categoryMap = loadTechnicianCategories(items.stream()
+                .map(item -> item.getTechnician().getId())
+                .distinct()
+                .toList());
+        return items.stream()
+                .map(item -> mapQuote(item,
+                        categoryMap.getOrDefault(item.getTechnician().getId(), List.of())))
                 .toList();
     }
 
@@ -544,11 +616,25 @@ public class ServiceRequestService {
     }
 
     private ServiceRequestResponse map(ServiceRequest item, Double distanceKm, boolean approximateLocation) {
+        Map<UUID, List<com.tecngo.service_requests.entity.ServiceRequestImage>> imageMap =
+                loadImages(List.of(item.getId()));
+        Map<UUID, List<String>> categoryMap = loadTechnicianCategories(
+                item.getTechnician() == null ? List.of() : List.of(item.getTechnician().getId()));
+        return map(item, distanceKm, approximateLocation,
+                imageMap.getOrDefault(item.getId(), List.of()),
+                item.getTechnician() == null
+                        ? List.of()
+                        : categoryMap.getOrDefault(item.getTechnician().getId(), List.of()));
+    }
+
+    private ServiceRequestResponse map(
+            ServiceRequest item,
+            Double distanceKm,
+            boolean approximateLocation,
+            List<com.tecngo.service_requests.entity.ServiceRequestImage> serviceImages,
+            List<String> technicianCategories
+    ) {
         User technician = item.getTechnician();
-        var serviceImages = images.findByServiceRequestIdOrderByCreatedAtAsc(item.getId()).stream()
-                .filter(image -> image.getContentAsset() == null
-                        || image.getContentAsset().getModerationStatus() == ModerationStatus.APPROVED)
-                .toList();
         return new ServiceRequestResponse(item.getId(), item.getClient().getId(), item.getClient().getFullName(),
                 technician == null ? null : technician.getId(), technician == null ? null : technician.getFullName(),
                 item.getClient().getProfilePhotoUrl(), item.getClient().getAverageRating(),
@@ -557,7 +643,7 @@ public class ServiceRequestService {
                 technician == null ? null : technician.getAverageRating(),
                 technician == null ? 0 : technician.getCompletedServicesCount(),
                 technician == null ? null : technician.getWorkExperienceDescription(),
-                technician == null ? List.of() : technicianProfiles.categoryNames(technician),
+                technicianCategories,
                 technician != null && technician.isDocumentsVerified()
                         && !blank(technician.getCertificatePhotoUrl()),
                 item.getCategory().getId(), item.getCategory().getName(), item.getDescription(),
@@ -580,7 +666,64 @@ public class ServiceRequestService {
                 item.getCity() == null ? null : item.getCity().getName());
     }
 
+    private Page<ServiceRequestResponse> mapPage(Page<ServiceRequest> page) {
+        return new PageImpl<>(mapAll(page.getContent(), Map.of(), false),
+                page.getPageable(), page.getTotalElements());
+    }
+
+    private List<ServiceRequestResponse> mapAll(List<ServiceRequest> items,
+                                                Map<UUID, Double> distances,
+                                                boolean approximateLocation) {
+        if (items.isEmpty()) return List.of();
+        Map<UUID, List<com.tecngo.service_requests.entity.ServiceRequestImage>> imageMap =
+                loadImages(items.stream().map(ServiceRequest::getId).toList());
+        Map<UUID, List<String>> categoryMap = loadTechnicianCategories(items.stream()
+                .map(ServiceRequest::getTechnician)
+                .filter(java.util.Objects::nonNull)
+                .map(User::getId)
+                .distinct()
+                .toList());
+        return items.stream().map(item -> {
+            UUID technicianId = item.getTechnician() == null ? null : item.getTechnician().getId();
+            return map(item, distances.get(item.getId()), approximateLocation,
+                    imageMap.getOrDefault(item.getId(), List.of()),
+                    technicianId == null ? List.of() : categoryMap.getOrDefault(technicianId, List.of()));
+        }).toList();
+    }
+
+    private Map<UUID, List<com.tecngo.service_requests.entity.ServiceRequestImage>> loadImages(
+            List<UUID> requestIds) {
+        if (requestIds.isEmpty()) return Map.of();
+        return images.findByServiceRequestIdInOrderByCreatedAtAsc(requestIds).stream()
+                .filter(image -> image.getContentAsset() == null
+                        || image.getContentAsset().getModerationStatus() == ModerationStatus.APPROVED)
+                .collect(Collectors.groupingBy(image -> image.getServiceRequest().getId()));
+    }
+
+    private Map<UUID, List<String>> loadTechnicianCategories(Collection<UUID> technicianIds) {
+        if (technicianIds.isEmpty()) return Map.of();
+        return technicianProfileRepository.findWithCategoriesByUserIdIn(technicianIds).stream()
+                .collect(Collectors.toMap(
+                        profile -> profile.getUser().getId(),
+                        profile -> profile.getCategories().stream()
+                                .map(category -> category.getName())
+                                .sorted()
+                                .toList()));
+    }
+
+    private PageRequest pageRequest(int page, int size) {
+        return PageRequest.of(Math.max(0, page), Math.max(1, Math.min(size, 100)),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+    }
+
     private ServiceQuoteResponse mapQuote(ServiceQuote quote) {
+        List<String> categories = loadTechnicianCategories(
+                List.of(quote.getTechnician().getId()))
+                .getOrDefault(quote.getTechnician().getId(), List.of());
+        return mapQuote(quote, categories);
+    }
+
+    private ServiceQuoteResponse mapQuote(ServiceQuote quote, List<String> technicianCategories) {
         User technician = quote.getTechnician();
         return new ServiceQuoteResponse(
                 quote.getId(),
@@ -591,7 +734,7 @@ public class ServiceRequestService {
                 technician.getAverageRating(),
                 technician.getCompletedServicesCount(),
                 technician.getWorkExperienceDescription(),
-                technicianProfiles.categoryNames(technician),
+                technicianCategories,
                 technician.isDocumentsVerified() && !blank(technician.getCertificatePhotoUrl()),
                 quote.getPrice(),
                 quote.getDescription(),

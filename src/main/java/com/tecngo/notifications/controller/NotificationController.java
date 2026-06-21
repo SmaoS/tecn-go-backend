@@ -19,8 +19,11 @@ public class NotificationController {
     private final NotificationService service;
 
     @GetMapping
-    public List<NotificationResponse> mine(@AuthenticationPrincipal User user) {
-        return service.mine(user);
+    public List<NotificationResponse> mine(
+            @RequestParam(required = false) java.time.Instant after,
+            @RequestParam(defaultValue = "50") int limit,
+            @AuthenticationPrincipal User user) {
+        return service.mine(user, after, limit);
     }
 
     @GetMapping("/unread-count")

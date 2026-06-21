@@ -12,7 +12,11 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import java.util.Map;
 import java.util.UUID;
+import java.time.Instant;
+import java.util.List;
+import org.springframework.data.domain.Pageable;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
@@ -81,5 +85,30 @@ class NotificationServiceTest {
                 argThat(data -> data.get("notificationType").equals("NEW_QUOTE")
                         && data.get("requestId").equals(requestId.toString())
                         && data.get("route").equals("RequestDetail")));
+    }
+
+    @Test
+    void incrementalPollingOnlyRequestsNotificationsAfterCursor() {
+        UUID userId = UUID.randomUUID();
+        User user = User.builder().id(userId).build();
+        Instant cursor = Instant.parse("2026-06-21T12:00:00Z");
+        Notification notification = Notification.builder()
+                .id(UUID.randomUUID())
+                .user(user)
+                .title("Nueva solicitud")
+                .message("Hay trabajo disponible")
+                .type(NotificationType.NEW_REQUEST)
+                .createdAt(cursor.plusSeconds(1))
+                .build();
+        when(notifications.findByUserIdAndCreatedAtAfterOrderByCreatedAtAsc(
+                eq(userId), eq(cursor), any(Pageable.class))).thenReturn(List.of(notification));
+
+        var result = service.mine(user, cursor, 50);
+
+        assertThat(result).extracting("id").containsExactly(notification.getId());
+        verify(notifications).findByUserIdAndCreatedAtAfterOrderByCreatedAtAsc(
+                eq(userId), eq(cursor), argThat(page -> page.getPageSize() == 50));
+        verify(notifications, never()).findByUserIdOrderByCreatedAtDesc(
+                eq(userId), any(Pageable.class));
     }
 }

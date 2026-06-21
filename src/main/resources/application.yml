@@ -12,6 +12,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        default_batch_fetch_size: ${HIBERNATE_BATCH_FETCH_SIZE:50}
+        jdbc:
+          batch_size: ${HIBERNATE_JDBC_BATCH_SIZE:25}
+        order_inserts: true
+        order_updates: true
+        generate_statistics: ${HIBERNATE_GENERATE_STATISTICS:false}
+        log_slow_query: ${HIBERNATE_SLOW_QUERY_MS:250}
   flyway:
     baseline-on-migrate: true
     baseline-version: 0
@@ -73,6 +80,8 @@ app:
     credentials-base64: ${FIREBASE_CREDENTIALS_BASE64:}
   notifications:
     new-request-radius-km: ${NEW_REQUEST_NOTIFICATION_RADIUS_KM:25}
+  performance:
+    available-request-candidate-limit: ${AVAILABLE_REQUEST_CANDIDATE_LIMIT:500}
   sms:
     provider: ${SMS_PROVIDER:mock}
     mock-code: ${OTP_MOCK_CODE:00000}
@@ -149,3 +158,4 @@ logging:
   level:
     root: INFO
     com.tecngo: INFO
+    org.hibernate.stat: ${HIBERNATE_STAT_LOG_LEVEL:OFF}

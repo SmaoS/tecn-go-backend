@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.Instant;
 import java.util.List;
@@ -41,11 +42,22 @@ public class ChatService {
     private final UserRepository users;
 
     @Transactional(readOnly = true)
-    public List<ChatMessageResponse> messages(UUID requestId, User user) {
+    public List<ChatMessageResponse> messages(UUID requestId, User user, Instant after, int limit) {
         ServiceRequest request = participantRequest(requestId, user);
         return rooms.findByServiceRequestId(request.getId())
-                .map(room -> messages.findByRoomIdOrderByCreatedAtAsc(room.getId()).stream()
-                        .map(item -> map(item, user)).toList())
+                .map(room -> {
+                    int boundedLimit = Math.max(1, Math.min(limit, 200));
+                    List<ChatMessage> items;
+                    if (after == null) {
+                        items = new java.util.ArrayList<>(messages.findByRoomIdOrderByCreatedAtDesc(
+                                room.getId(), PageRequest.of(0, boundedLimit)));
+                        java.util.Collections.reverse(items);
+                    } else {
+                        items = messages.findByRoomIdAndCreatedAtAfterOrderByCreatedAtAsc(
+                                room.getId(), after, PageRequest.of(0, boundedLimit));
+                    }
+                    return items.stream().map(item -> map(item, user)).toList();
+                })
                 .orElseGet(List::of);
     }
 

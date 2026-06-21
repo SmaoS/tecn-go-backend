@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 import java.util.HashMap;
@@ -28,8 +29,13 @@ public class NotificationService {
     private final UserPushNotificationService pushNotifications;
 
     @Transactional(readOnly = true)
-    public List<NotificationResponse> mine(User user) {
-        return notifications.findByUserIdOrderByCreatedAtDesc(user.getId()).stream().map(this::map).toList();
+    public List<NotificationResponse> mine(User user, java.time.Instant after, int limit) {
+        int boundedLimit = Math.max(1, Math.min(limit, 100));
+        var page = PageRequest.of(0, boundedLimit);
+        var items = after == null
+                ? notifications.findByUserIdOrderByCreatedAtDesc(user.getId(), page)
+                : notifications.findByUserIdAndCreatedAtAfterOrderByCreatedAtAsc(user.getId(), after, page);
+        return items.stream().map(this::map).toList();
     }
 
     @Transactional(readOnly = true)

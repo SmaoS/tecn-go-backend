@@ -3,6 +3,7 @@ package com.tecngo.service_requests.controller;
 import com.tecngo.service_requests.dto.*;
 import com.tecngo.service_requests.service.ServiceRequestService;
 import com.tecngo.users.entity.User;
+import com.tecngo.shared.dto.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -39,10 +40,29 @@ public class ServiceRequestController {
         return service.clientRequests(user, activeOnly);
     }
 
+    @GetMapping("/my/page")
+    @PreAuthorize("hasRole('CLIENT')")
+    public PageResponse<ServiceRequestResponse> myPage(
+            @RequestParam(defaultValue = "false") boolean activeOnly,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal User user) {
+        return PageResponse.from(service.clientRequestsPage(user, activeOnly, page, size));
+    }
+
     @GetMapping("/my/history")
     @PreAuthorize("hasRole('CLIENT')")
     public List<ServiceRequestResponse> myHistory(@AuthenticationPrincipal User user) {
         return service.clientHistory(user);
+    }
+
+    @GetMapping("/my/history/page")
+    @PreAuthorize("hasRole('CLIENT')")
+    public PageResponse<ServiceRequestResponse> myHistoryPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal User user) {
+        return PageResponse.from(service.clientHistoryPage(user, page, size));
     }
 
     @GetMapping("/my-assigned")
@@ -53,10 +73,29 @@ public class ServiceRequestController {
         return service.assignedRequests(user, activeOnly);
     }
 
+    @GetMapping("/my-assigned/page")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    public PageResponse<ServiceRequestResponse> myAssignedPage(
+            @RequestParam(defaultValue = "false") boolean activeOnly,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal User user) {
+        return PageResponse.from(service.assignedRequestsPage(user, activeOnly, page, size));
+    }
+
     @GetMapping("/my-assigned/history")
     @PreAuthorize("hasRole('TECHNICIAN')")
     public List<ServiceRequestResponse> myAssignedHistory(@AuthenticationPrincipal User user) {
         return service.assignedHistory(user);
+    }
+
+    @GetMapping("/my-assigned/history/page")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    public PageResponse<ServiceRequestResponse> myAssignedHistoryPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal User user) {
+        return PageResponse.from(service.assignedHistoryPage(user, page, size));
     }
 
     @GetMapping("/{id}")
@@ -75,6 +114,20 @@ public class ServiceRequestController {
             @RequestParam(required = false) Double radiusKm,
             @AuthenticationPrincipal User user) {
         return service.available(user, cityId, categoryId, useRadius, radiusKm);
+    }
+
+    @GetMapping("/available/page")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    public PageResponse<ServiceRequestResponse> availablePage(
+            @RequestParam(required = false) java.util.UUID cityId,
+            @RequestParam(required = false) java.util.UUID categoryId,
+            @RequestParam(required = false) Boolean useRadius,
+            @RequestParam(required = false) Double radiusKm,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal User user) {
+        return PageResponse.from(service.availablePage(
+                user, cityId, categoryId, useRadius, radiusKm, page, size));
     }
 
     @PutMapping("/{id}/quote")
