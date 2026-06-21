@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import com.tecngo.observability.BusinessMetrics;
+import io.sentry.Sentry;
 
 @Component
 @RequiredArgsConstructor
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Component;
 public class OutboxDispatcherJob {
     private final OutboxClaimService claims;
     private final OutboxEventProcessor processor;
+    private final BusinessMetrics metrics;
 
     @Value("${app.reliability.outbox.batch-size:25}")
     private int batchSize;
@@ -24,10 +27,13 @@ public class OutboxDispatcherJob {
             try {
                 processor.process(event);
                 claims.processed(event.getId());
+                metrics.outboxProcessed(event.getEventType());
             } catch (Exception exception) {
                 log.warn("Outbox event {} ({}) failed: {}",
                         event.getId(), event.getEventType(), exception.getMessage());
                 claims.failed(event.getId(), exception);
+                metrics.outboxFailed(event.getEventType());
+                Sentry.captureException(exception);
             }
         });
     }

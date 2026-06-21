@@ -91,6 +91,8 @@ app:
     wompi-reconciliation:
       polling-ms: ${WOMPI_RECONCILIATION_POLLING_MS:60000}
       batch-size: ${WOMPI_RECONCILIATION_BATCH_SIZE:25}
+  observability:
+    metrics-scrape-token: ${METRICS_SCRAPE_TOKEN:}
   sms:
     provider: ${SMS_PROVIDER:mock}
     mock-code: ${OTP_MOCK_CODE:00000}
@@ -158,13 +160,33 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      environment: ${APP_ENVIRONMENT:${SPRING_PROFILES_ACTIVE:unknown}}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 100ms,250ms,500ms,1s,2s,5s
 
 logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] [correlationId=%X{correlationId:-none}] %logger{36} - %msg%n"
   level:
     root: INFO
     com.tecngo: INFO
     org.hibernate.stat: ${HIBERNATE_STAT_LOG_LEVEL:OFF}
+
+sentry:
+  dsn: ${SENTRY_DSN:}
+  enabled: ${SENTRY_ENABLED:false}
+  environment: ${APP_ENVIRONMENT:${SPRING_PROFILES_ACTIVE:unknown}}
+  release: ${APP_RELEASE:tecngo-backend@1.0.0}
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.1}
+  send-default-pii: false
+  max-request-body-size: none

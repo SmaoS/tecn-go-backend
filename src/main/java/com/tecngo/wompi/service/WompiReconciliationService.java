@@ -6,6 +6,8 @@ import com.tecngo.technician_wallet.service.TechnicianWalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.tecngo.observability.BusinessMetrics;
+import io.sentry.Sentry;
 
 @Service
 @RequiredArgsConstructor
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 public class WompiReconciliationService {
     private final TechnicianWalletService wallets;
     private final WompiPaymentService wompi;
+    private final BusinessMetrics metrics;
 
     public WompiReconciliationResponse reconcile(int limit) {
         var candidates = wallets.reconciliationCandidates(limit);
@@ -23,8 +26,11 @@ public class WompiReconciliationService {
                 wallets.applyWompiTransaction(
                         wompi.transaction(recharge.getWompiTransactionId()));
                 reconciled++;
+                metrics.wompiReconciled();
             } catch (Exception exception) {
                 failed++;
+                metrics.wompiReconciliationFailed();
+                Sentry.captureException(exception);
                 int delaySeconds = Math.min(3600,
                         60 << Math.min(recharge.getReconciliationAttempts(), 5));
                 wallets.recordReconciliationFailure(

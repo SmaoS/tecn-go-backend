@@ -11,10 +11,16 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
+import com.tecngo.observability.BusinessMetrics;
+import com.tecngo.observability.CorrelationIdFilter;
+import io.sentry.Sentry;
+import lombok.RequiredArgsConstructor;
 
 @RestControllerAdvice
 @Slf4j
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+    private final BusinessMetrics metrics;
     @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     ApiError notFound(NotFoundException ex) {
@@ -76,7 +82,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     ApiError unexpected(Exception ex, HttpServletRequest request) {
-        String traceId = UUID.randomUUID().toString();
+        String traceId = request.getAttribute(CorrelationIdFilter.MDC_KEY) instanceof String value
+                ? value : UUID.randomUUID().toString();
+        metrics.serverError();
+        Sentry.captureException(ex);
         log.error("Unexpected server error [{}] {} {}", traceId, request.getMethod(), request.getRequestURI(), ex);
         return error(HttpStatus.INTERNAL_SERVER_ERROR, traceId, "Unexpected server error. Reference: " + traceId, null);
     }

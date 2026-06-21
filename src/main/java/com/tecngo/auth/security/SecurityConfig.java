@@ -43,7 +43,7 @@ public class SecurityConfig {
                                 "/v1/auth/forgot-password", "/v1/auth/reset-password",
                                 "/v1/services/**", "/v1/service-categories/**",
                                 "/v1/catalogs/**",
-                                "/actuator/health", "/actuator/info",
+                                "/actuator/health", "/actuator/info", "/actuator/prometheus",
                                 "/version", "/error", "/webhooks/wompi").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
                                 .hasRole("ADMIN")
@@ -85,6 +85,7 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("X-Correlation-ID"));
         config.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

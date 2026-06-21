@@ -530,3 +530,14 @@ PUT /v1/admin/reliability/outbox/{id}/retry
 La conciliación automática consulta Wompi cada minuto para recargas pendientes que
 ya tienen `wompi_transaction_id`. En mobile el Checkout redirige a
 `tecngo://payment-result?id=...`; en web vuelve a `/app/tecnico/saldo?id=...`.
+
+## Observabilidad
+
+Cada petición usa `X-Correlation-ID`, visible también en logs, respuestas HTTP y
+eventos Sentry. Actuator expone `health`, `info` y `prometheus`; este último exige
+`Authorization: Bearer METRICS_SCRAPE_TOKEN` cuando el token está configurado.
+
+Las métricas incluyen HTTP, JVM, Hikari, outbox, errores inesperados y conciliación
+Wompi. Sentry permanece deshabilitado sin `SENTRY_ENABLED=true` y `SENTRY_DSN`.
+La configuración completa de alertas y dashboards está en
+`tecngo-infra/OBSERVABILITY.md`.
