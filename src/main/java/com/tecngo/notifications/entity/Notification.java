@@ -44,6 +44,8 @@ public class Notification {
 
     private UUID requestId;
 
+    private UUID outboxEventId;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) createdAt = Instant.now();

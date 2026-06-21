@@ -505,3 +505,28 @@ notificaciones, chat e imágenes. Para una consulta problemática use además
 La búsqueda por cercanía evalúa como máximo `AVAILABLE_REQUEST_CANDIDATE_LIMIT=500`
 solicitudes recientes antes de ordenar con Haversine. Este límite mantiene acotado el
 costo hasta una futura migración del cálculo geográfico a PostGIS.
+
+## Outbox, reintentos y conciliación Wompi
+
+La migración `V35` incorpora `outbox_events`. Las notificaciones visibles se guardan
+en la misma transacción del negocio y el envío FCM se realiza desde el outbox. Los
+fallos se reintentan con backoff exponencial; después de `OUTBOX_MAX_ATTEMPTS` quedan
+en estado `DEAD` para revisión administrativa.
+
+Los webhooks Wompi se validan y se guardan con una clave externa única antes de
+procesarlos. Una entrega repetida no vuelve a acreditar saldo. Antes de aprobar una
+recarga se comparan obligatoriamente referencia, monto, moneda e ID de transacción.
+
+Web y mobile envían el ID retornado por Wompi a:
+
+```text
+PUT /v1/technicians/me/wallet/recharges/transaction
+POST /v1/admin/technicians/wallets/reconcile-wompi
+GET /v1/admin/reliability/outbox/summary
+GET /v1/admin/reliability/outbox/dead
+PUT /v1/admin/reliability/outbox/{id}/retry
+```
+
+La conciliación automática consulta Wompi cada minuto para recargas pendientes que
+ya tienen `wompi_transaction_id`. En mobile el Checkout redirige a
+`tecngo://payment-result?id=...`; en web vuelve a `/app/tecnico/saldo?id=...`.

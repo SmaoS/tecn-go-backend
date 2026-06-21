@@ -48,6 +48,12 @@ public class TechnicianRecharge {
 
     private Instant approvedAt;
     private Instant rejectedAt;
+    @Column(nullable = false)
+    private int reconciliationAttempts;
+    private Instant nextReconciliationAt;
+    private Instant lastReconciledAt;
+    @Column(length = 1000)
+    private String lastReconciliationError;
 
     @PrePersist
     void onCreate() {

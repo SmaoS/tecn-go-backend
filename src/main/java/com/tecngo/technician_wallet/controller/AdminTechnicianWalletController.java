@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import com.tecngo.wompi.service.WompiReconciliationService;
 
 @RestController
 @RequestMapping("/v1/admin/technicians")
@@ -18,6 +19,7 @@ import java.util.UUID;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminTechnicianWalletController {
     private final TechnicianWalletService service;
+    private final WompiReconciliationService reconciliation;
 
     @GetMapping("/wallets")
     public List<TechnicianWalletResponse> wallets(@AuthenticationPrincipal User admin) {
@@ -34,5 +36,11 @@ public class AdminTechnicianWalletController {
                                                           @Valid @RequestBody AdminWalletAdjustmentRequest request,
                                                           @AuthenticationPrincipal User admin) {
         return service.adminAdjustment(id, request.amount(), request.comment(), admin);
+    }
+
+    @PostMapping("/wallets/reconcile-wompi")
+    public WompiReconciliationResponse reconcileWompi(
+            @RequestParam(defaultValue = "50") int limit) {
+        return reconciliation.reconcile(Math.max(1, Math.min(limit, 100)));
     }
 }

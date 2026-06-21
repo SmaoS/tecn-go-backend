@@ -11,9 +11,6 @@ import com.tecngo.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
@@ -60,22 +57,33 @@ public class NotificationService {
         notifications.delete(notification);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onNotification(UserNotificationEvent event) {
+        deliverOutbox(null, event);
+    }
+
+    @Transactional
+    public void persistOutbox(UUID outboxEventId, UserNotificationEvent event) {
         User user = users.findById(event.userId())
                 .orElseThrow(() -> new NotFoundException("Notification user not found"));
-        notifications.save(Notification.builder()
-                .user(user)
-                .title(event.title())
-                .message(event.message())
-                .type(event.type())
-                .route(event.data().get("route"))
-                .requestId(parseUuid(event.data().get("requestId")))
-                .build());
+        if (outboxEventId == null || notifications.findByOutboxEventId(outboxEventId).isEmpty()) {
+            notifications.saveAndFlush(Notification.builder()
+                    .user(user)
+                    .title(event.title())
+                    .message(event.message())
+                    .type(event.type())
+                    .route(event.data().get("route"))
+                    .requestId(parseUuid(event.data().get("requestId")))
+                    .outboxEventId(outboxEventId)
+                    .build());
+        }
+    }
+
+    @Transactional
+    public void deliverOutbox(UUID outboxEventId, UserNotificationEvent event) {
+        persistOutbox(outboxEventId, event);
         Map<String, String> pushData = new HashMap<>(event.data());
         pushData.put("notificationType", event.type().name());
-        pushNotifications.sendPush(user.getId(), event.title(), event.message(), Map.copyOf(pushData));
+        pushNotifications.sendPush(event.userId(), event.title(), event.message(), Map.copyOf(pushData));
     }
 
     private NotificationResponse map(Notification item) {

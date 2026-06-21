@@ -13,6 +13,7 @@ import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.repository.UserRepository;
 import com.tecngo.wompi.service.WompiPaymentService;
+import com.tecngo.wompi.dto.WompiTransactionSnapshot;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -64,6 +66,11 @@ public class TechnicianWalletService {
 
     @Transactional
     public RechargeResponse createRecharge(User technician, BigDecimal amount) {
+        return createRecharge(technician, amount, false);
+    }
+
+    @Transactional
+    public RechargeResponse createRecharge(User technician, BigDecimal amount, boolean mobile) {
         requireTechnician(technician);
         if (!parameters.technicianRechargeEnabled()) {
             throw new ConflictException("Technician recharges are disabled");
@@ -74,7 +81,7 @@ public class TechnicianWalletService {
         String reference = "TECNGO-TECH-" + technician.getId() + "-" + System.currentTimeMillis();
         transaction(wallet, WalletTransactionType.RECHARGE_PENDING, BigDecimal.ZERO,
                 reference, "Recarga iniciada por Wompi");
-        String paymentUrl = wompi.checkoutUrl(reference, amount, "COP");
+        String paymentUrl = wompi.checkoutUrl(reference, amount, "COP", mobile);
         TechnicianRecharge recharge = recharges.save(TechnicianRecharge.builder()
                 .technician(technician)
                 .amount(amount)
@@ -90,18 +97,24 @@ public class TechnicianWalletService {
     public void approveRecharge(String reference, String wompiTransactionId) {
         TechnicianRecharge recharge = recharges.findByReferenceForUpdate(reference)
                 .orElseThrow(() -> new NotFoundException("Recharge not found"));
+        approveRecharge(recharge, wompiTransactionId);
+    }
+
+    private void approveRecharge(TechnicianRecharge recharge, String wompiTransactionId) {
         if (recharge.getStatus() == RechargeStatus.APPROVED) return;
         if (recharge.getStatus() != RechargeStatus.PENDING) {
             throw new ConflictException("Recharge is not pending");
         }
         if (wompiTransactionId != null && !wompiTransactionId.isBlank()
-                && recharges.findByWompiTransactionId(wompiTransactionId).isPresent()) {
+                && recharges.findByWompiTransactionId(wompiTransactionId)
+                .filter(existing -> !existing.getId().equals(recharge.getId()))
+                .isPresent()) {
             return;
         }
         TechnicianWallet wallet = wallets.findByTechnicianIdForUpdate(recharge.getTechnician().getId())
                 .orElseGet(() -> ensureWallet(recharge.getTechnician()));
         transaction(wallet, WalletTransactionType.RECHARGE_APPROVED, recharge.getAmount(),
-                reference, "Recarga aprobada por Wompi");
+                recharge.getReference(), "Recarga aprobada por Wompi");
         recharge.setStatus(RechargeStatus.APPROVED);
         recharge.setWompiTransactionId(clean(wompiTransactionId));
         recharge.setApprovedAt(Instant.now());
@@ -111,14 +124,77 @@ public class TechnicianWalletService {
     public void rejectRecharge(String reference, String wompiTransactionId) {
         TechnicianRecharge recharge = recharges.findByReferenceForUpdate(reference)
                 .orElseThrow(() -> new NotFoundException("Recharge not found"));
+        rejectRecharge(recharge, wompiTransactionId);
+    }
+
+    private void rejectRecharge(TechnicianRecharge recharge, String wompiTransactionId) {
         if (recharge.getStatus() != RechargeStatus.PENDING) return;
         TechnicianWallet wallet = wallets.findByTechnicianIdForUpdate(recharge.getTechnician().getId())
                 .orElseGet(() -> ensureWallet(recharge.getTechnician()));
         transaction(wallet, WalletTransactionType.RECHARGE_REJECTED, BigDecimal.ZERO,
-                reference, "Recarga rechazada por Wompi");
+                recharge.getReference(), "Recarga rechazada por Wompi");
         recharge.setStatus(RechargeStatus.REJECTED);
         recharge.setWompiTransactionId(clean(wompiTransactionId));
         recharge.setRejectedAt(Instant.now());
+    }
+
+    public void attachAndReconcile(UUID rechargeId, String transactionId, User technician) {
+        requireTechnician(technician);
+        TechnicianRecharge recharge = recharges.findByIdAndTechnicianId(rechargeId, technician.getId())
+                .orElseThrow(() -> new NotFoundException("Recharge not found"));
+        if (recharge.getStatus() != RechargeStatus.PENDING) return;
+        WompiTransactionSnapshot snapshot = wompi.transaction(transactionId.trim());
+        if (!recharge.getReference().equals(snapshot.reference())) {
+            throw new ConflictException("Wompi transaction does not belong to this recharge");
+        }
+        applyWompiTransaction(snapshot);
+    }
+
+    public void attachAndReconcile(String transactionId, User technician) {
+        requireTechnician(technician);
+        WompiTransactionSnapshot snapshot = wompi.transaction(transactionId.trim());
+        TechnicianRecharge recharge = recharges.findByReference(snapshot.reference())
+                .filter(item -> item.getTechnician().getId().equals(technician.getId()))
+                .orElseThrow(() -> new NotFoundException("Recharge not found"));
+        if (recharge.getStatus() != RechargeStatus.PENDING) return;
+        applyWompiTransaction(snapshot);
+    }
+
+    @Transactional
+    public void applyWompiTransaction(WompiTransactionSnapshot snapshot) {
+        if (snapshot.reference() == null || !snapshot.reference().startsWith("TECNGO-TECH-")) return;
+        TechnicianRecharge recharge = recharges.findByReferenceForUpdate(snapshot.reference())
+                .orElseThrow(() -> new NotFoundException("Recharge not found"));
+        validateSnapshot(recharge, snapshot);
+        if (recharge.getWompiTransactionId() != null
+                && !recharge.getWompiTransactionId().equals(snapshot.transactionId())) {
+            throw new ConflictException("Recharge is linked to another Wompi transaction");
+        }
+        recharge.setWompiTransactionId(clean(snapshot.transactionId()));
+        recharge.setLastReconciledAt(Instant.now());
+        recharge.setReconciliationAttempts(recharge.getReconciliationAttempts() + 1);
+        recharge.setLastReconciliationError(null);
+        switch (snapshot.status().toUpperCase()) {
+            case "APPROVED" -> approveRecharge(recharge, snapshot.transactionId());
+            case "DECLINED", "VOIDED", "ERROR" -> rejectRecharge(recharge, snapshot.transactionId());
+            default -> recharge.setNextReconciliationAt(Instant.now().plusSeconds(300));
+        }
+    }
+
+    @Transactional
+    public void recordReconciliationFailure(String reference, Exception exception, int delaySeconds) {
+        recharges.findByReferenceForUpdate(reference).ifPresent(recharge -> {
+            recharge.setReconciliationAttempts(recharge.getReconciliationAttempts() + 1);
+            recharge.setLastReconciledAt(Instant.now());
+            recharge.setNextReconciliationAt(Instant.now().plusSeconds(delaySeconds));
+            recharge.setLastReconciliationError(cleanError(exception));
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public List<TechnicianRecharge> reconciliationCandidates(int limit) {
+        return recharges.findReconciliationCandidates(Instant.now(),
+                PageRequest.of(0, Math.max(1, Math.min(limit, 100))));
     }
 
     @Transactional(readOnly = true)
@@ -239,6 +315,25 @@ public class TechnicianWalletService {
         if (amount.compareTo(parameters.technicianMaxRechargeAmount()) > 0) {
             throw new IllegalArgumentException("Recharge amount exceeds the maximum");
         }
+    }
+
+    private void validateSnapshot(TechnicianRecharge recharge, WompiTransactionSnapshot snapshot) {
+        if (snapshot.transactionId() == null || snapshot.transactionId().isBlank()) {
+            throw new ConflictException("Wompi transaction id is missing");
+        }
+        if (snapshot.amount() == null || recharge.getAmount().compareTo(snapshot.amount()) != 0) {
+            throw new ConflictException("Wompi transaction amount does not match the recharge");
+        }
+        if (snapshot.currency() == null || !recharge.getCurrency().equalsIgnoreCase(snapshot.currency())) {
+            throw new ConflictException("Wompi transaction currency does not match the recharge");
+        }
+    }
+
+    private String cleanError(Exception exception) {
+        String message = exception.getMessage() == null
+                ? exception.getClass().getSimpleName()
+                : exception.getMessage();
+        return message.length() > 1000 ? message.substring(0, 1000) : message;
     }
 
     private void requireTechnician(User user) {

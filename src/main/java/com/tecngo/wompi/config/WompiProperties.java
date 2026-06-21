@@ -24,4 +24,14 @@ public record WompiProperties(
     public boolean configuredForWebhooks() {
         return eventsSecret != null && !eventsSecret.isBlank();
     }
+
+    public boolean configuredForQueries() {
+        return publicKey != null && !publicKey.isBlank();
+    }
+
+    public String apiBaseUrl() {
+        return "prod".equalsIgnoreCase(env) || "production".equalsIgnoreCase(env)
+                ? "https://production.wompi.co/v1"
+                : "https://sandbox.wompi.co/v1";
+    }
 }

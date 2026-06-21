@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/v1/technicians/me/wallet")
@@ -31,6 +32,20 @@ public class TechnicianWalletController {
     @PostMapping("/recharge")
     public RechargeResponse recharge(@Valid @RequestBody RechargeRequest request,
                                      @AuthenticationPrincipal User user) {
-        return service.createRecharge(user, request.amount());
+        return service.createRecharge(user, request.amount(),
+                "MOBILE".equalsIgnoreCase(request.platform()));
+    }
+
+    @PutMapping("/recharges/{id}/transaction")
+    public void attachTransaction(@PathVariable UUID id,
+                                  @Valid @RequestBody WompiTransactionRequest request,
+                                  @AuthenticationPrincipal User user) {
+        service.attachAndReconcile(id, request.transactionId(), user);
+    }
+
+    @PutMapping("/recharges/transaction")
+    public void attachTransaction(@Valid @RequestBody WompiTransactionRequest request,
+                                  @AuthenticationPrincipal User user) {
+        service.attachAndReconcile(request.transactionId(), user);
     }
 }
