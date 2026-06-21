@@ -96,6 +96,9 @@ app:
       batch-size: ${WOMPI_RECONCILIATION_BATCH_SIZE:25}
   observability:
     metrics-scrape-token: ${METRICS_SCRAPE_TOKEN:}
+  compliance:
+    audit-hmac-secret: ${COMPLIANCE_AUDIT_HMAC_SECRET:${JWT_SECRET:local-development-secret-key-change-me-now}}
+    retention-cron: ${COMPLIANCE_RETENTION_CRON:0 35 3 * * *}
   sms:
     provider: ${SMS_PROVIDER:mock}
     mock-code: ${OTP_MOCK_CODE:00000}

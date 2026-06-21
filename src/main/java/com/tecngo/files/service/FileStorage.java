@@ -14,6 +14,9 @@ public interface FileStorage {
     default void delete(String publicId) {
         throw new UnsupportedOperationException("Delete is not supported");
     }
+    default void delete(String publicId, String contentType) {
+        delete(publicId);
+    }
     Resource load(String fileName);
 
     record StoredFile(

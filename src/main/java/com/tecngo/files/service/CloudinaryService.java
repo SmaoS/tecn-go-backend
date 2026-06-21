@@ -70,9 +70,15 @@ public class CloudinaryService implements FileStorage {
 
     @Override
     public void delete(String publicId) {
+        delete(publicId, null);
+    }
+
+    @Override
+    public void delete(String publicId, String contentType) {
         try {
+            String resourceType = "application/pdf".equalsIgnoreCase(contentType) ? "raw" : "image";
             cloudinary.uploader().destroy(publicId, ObjectUtils.asMap(
-                    "resource_type", "image",
+                    "resource_type", resourceType,
                     "type", "authenticated"
             ));
         } catch (IOException exception) {

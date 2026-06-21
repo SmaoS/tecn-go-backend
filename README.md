@@ -551,3 +551,25 @@ mvn verify
 Este comando ejecuta pruebas unitarias e integración, reglas ArchUnit y JaCoCo. El
 reporte queda en `target/site/jacoco`; el build exige al menos 50% de líneas y 30% de
 ramas. CodeQL y Dependabot están configurados en `.github`.
+
+## Cumplimiento y gobierno de datos
+
+La migración `V36` incorpora políticas de retención, solicitudes de exportación y
+anonimización, registro de incidentes y auditoría de accesos sensibles. Las
+anonimizaciones requieren aprobación administrativa, revocan sesiones y eliminan
+documentos privados, pero conservan registros financieros y del servicio que tengan
+una base legal vigente.
+
+```text
+POST /v1/users/me/data-export
+POST /v1/users/me/data-anonymization
+GET  /v1/admin/compliance/data-requests
+GET  /v1/admin/compliance/retention-policies
+POST /v1/admin/compliance/retention/run
+GET  /v1/admin/compliance/incidents
+GET  /v1/admin/compliance/access-audits
+```
+
+Configure `COMPLIANCE_AUDIT_HMAC_SECRET` con un secreto independiente y
+`COMPLIANCE_RETENTION_CRON` con la programación deseada. La guía operativa completa
+está en `tecngo-infra/COMPLIANCE.md`.
