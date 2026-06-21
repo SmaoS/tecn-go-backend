@@ -1,6 +1,9 @@
 spring:
   application:
     name: tecngo-backend
+  profiles:
+    group:
+      staging: prod
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}

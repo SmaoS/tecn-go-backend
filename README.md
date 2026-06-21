@@ -541,3 +541,13 @@ Las métricas incluyen HTTP, JVM, Hikari, outbox, errores inesperados y concilia
 Wompi. Sentry permanece deshabilitado sin `SENTRY_ENABLED=true` y `SENTRY_DSN`.
 La configuración completa de alertas y dashboards está en
 `tecngo-infra/OBSERVABILITY.md`.
+
+## Calidad
+
+```bash
+mvn verify
+```
+
+Este comando ejecuta pruebas unitarias e integración, reglas ArchUnit y JaCoCo. El
+reporte queda en `target/site/jacoco`; el build exige al menos 50% de líneas y 30% de
+ramas. CodeQL y Dependabot están configurados en `.github`.

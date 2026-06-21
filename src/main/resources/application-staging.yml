@@ -1,0 +1,15 @@
+info:
+  app:
+    environment: ${APP_ENVIRONMENT:staging}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
+logging:
+  level:
+    root: INFO
+    com.tecngo: INFO
+    org.hibernate.SQL: WARN
