@@ -7,6 +7,7 @@ import com.tecngo.users.dto.UserProfileRequest;
 import com.tecngo.users.dto.UserProfileResponse;
 import com.tecngo.users.dto.ActiveModeResponse;
 import com.tecngo.users.dto.ChangeActiveModeRequest;
+import com.tecngo.users.dto.VerifyUserPhoneRequest;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.service.ActiveModeService;
 import com.tecngo.users.service.UserService;
@@ -39,6 +40,12 @@ public class UserController {
     public UserProfileResponse updateProfile(@Valid @RequestBody UserProfileRequest request,
                                              @AuthenticationPrincipal User user) {
         return service.updateProfile(user, request);
+    }
+
+    @PutMapping("/me/phone-verification")
+    public UserProfileResponse verifyPhone(@Valid @RequestBody VerifyUserPhoneRequest request,
+                                           @AuthenticationPrincipal User user) {
+        return service.verifyPhone(user, request.phone(), request.verificationToken());
     }
 
     @PostMapping("/me/change-password")

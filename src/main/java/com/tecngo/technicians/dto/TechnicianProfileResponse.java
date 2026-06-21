@@ -15,6 +15,7 @@ public record TechnicianProfileResponse(
         boolean profilePhotoFaceValidated, String certificatePhotoUrl,
         String workExperienceDescription, BigDecimal averageRating,
         long completedServicesCount, long paidServicesCount, VerificationStatus verificationStatus,
+        boolean phoneVerified,
         String homeAddress, Double homeLatitude, Double homeLongitude, String homeCity,
         String homeNeighborhood, UUID countryId, String countryName, UUID departmentId,
         String departmentName, UUID cityId, String cityName

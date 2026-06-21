@@ -20,7 +20,8 @@ class UserServicePasswordTest {
             users, mock(ManagedContentPolicy.class), encoder,
             mock(PasswordResetTokenRepository.class), mock(PasswordSecurityAuditRepository.class),
             mock(com.tecngo.catalogs.service.GeographicCatalogService.class),
-            mock(com.tecngo.phone_auth.service.PhoneNormalizer.class));
+            mock(com.tecngo.phone_auth.service.PhoneNormalizer.class),
+            mock(com.tecngo.phone_auth.service.PhoneOtpService.class));
 
     @Test
     void changePasswordValidatesCurrentPassword() {

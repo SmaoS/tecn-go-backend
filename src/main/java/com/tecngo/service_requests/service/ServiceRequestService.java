@@ -277,7 +277,7 @@ public class ServiceRequestService {
         quote = quotes.save(quote);
         events.publishEvent(new UserNotificationEvent(request.getClient().getId(), "Nueva cotización recibida",
                 technician.getFullName() + " cotizó " + formatCop(technicianPrice)
-                        + " para tu solicitud " + request.getCategory().getName(),
+                        + " para tu solicitud en" + request.getCategory().getName(),
                 NotificationType.NEW_QUOTE, requestData(request)));
         return mapQuote(quote);
     }

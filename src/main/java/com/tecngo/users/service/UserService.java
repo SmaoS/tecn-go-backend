@@ -17,6 +17,7 @@ import com.tecngo.users.entity.User;
 import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.repository.UserRepository;
 import com.tecngo.phone_auth.service.PhoneNormalizer;
+import com.tecngo.phone_auth.service.PhoneOtpService;
 import com.tecngo.shared.exception.ConflictException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ public class UserService {
     private final PasswordSecurityAuditRepository passwordAudits;
     private final GeographicCatalogService geographicCatalogs;
     private final PhoneNormalizer phones;
+    private final PhoneOtpService phoneOtps;
 
     @Transactional
     public void updateFcmToken(User user, String token) {
@@ -104,6 +106,22 @@ public class UserService {
             user.setProfilePhotoVerifiedAt(null);
         }
         updateVerificationStatus(user, previousDocument, newDocument);
+        return map(users.save(user));
+    }
+
+    @Transactional
+    public UserProfileResponse verifyPhone(User authenticatedUser, String rawPhone,
+                                           String verificationToken) {
+        User user = profileUser(authenticatedUser);
+        String phone = phoneOtps.consume(rawPhone, verificationToken);
+        users.findByPhoneNormalized(phone)
+                .filter(existing -> !existing.getId().equals(user.getId()))
+                .ifPresent(existing -> {
+                    throw new ConflictException("Phone is already registered");
+                });
+        user.setPhone(phone);
+        user.setPhoneNormalized(phone);
+        user.setPhoneVerified(true);
         return map(users.save(user));
     }
 

@@ -164,6 +164,7 @@ configurada en Twilio Verify debe coincidir con `OTP_LENGTH`.
 | GET | `/api/v1/notifications/unread-count` | JWT |
 | PUT | `/api/v1/notifications/{id}/read` | Propietario |
 | PUT | `/api/v1/users/me/fcm-token` | JWT |
+| PUT | `/api/v1/users/me/phone-verification` | JWT, consume token OTP |
 | POST | `/api/v1/files/upload` | JWT, JPG/PNG/PDF |
 | GET | `/api/v1/files/{fileName}` | Perfil público; evidencias dueño/ADMIN/VERIFIER |
 | GET, PUT | `/api/v1/users/me/profile` | Dueño autenticado |
