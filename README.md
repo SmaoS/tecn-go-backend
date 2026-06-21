@@ -98,6 +98,31 @@ guarda únicamente su hash. En producción `REQUIRE_EMAIL_VERIFICATION=true` blo
 creación de solicitudes y las operaciones sensibles del técnico hasta confirmar el
 correo. Sin `RESEND_API_KEY`, desarrollo escribe el enlace en los logs.
 
+## Seguridad de producción
+
+La migración `V32` agrega sesiones JWT persistidas, revocación individual, desafíos
+MFA administrativos y rate limiting persistente para autenticación. Cada JWT incluye
+un `jti` asociado a `auth_sessions`; cerrar sesión, cambiar la contraseña o recuperar
+la cuenta revoca las sesiones correspondientes.
+
+Endpoints:
+
+```text
+POST   /v1/auth/mfa/verify
+POST   /v1/auth/logout
+POST   /v1/auth/logout-all
+GET    /v1/users/me/sessions
+DELETE /v1/users/me/sessions/{sessionId}
+```
+
+`ADMIN_MFA_ENABLED=true` exige un código enviado por Resend a `ADMIN` y `VERIFIER`.
+MFA no permite fallback a logs: producción debe tener `RESEND_API_KEY`. Los intentos
+fallidos de login se limitan por identidad e IP. `REQUIRE_PERSISTED_SESSIONS=true`
+invalida JWT antiguos o no registrados.
+
+Swagger se deshabilita con `SWAGGER_ENABLED=false` en producción. Si se habilita
+temporalmente, `/swagger-ui/**` y `/v3/api-docs/**` requieren rol `ADMIN`.
+
 ## Autenticación por celular OTP
 
 El usuario puede registrarse e iniciar sesión con celular y contraseña. El registro por

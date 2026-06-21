@@ -34,6 +34,12 @@ app:
     private-key-id: ${FIREBASE_PRIVATE_KEY_ID:}
     credentials-base64: ${FIREBASE_CREDENTIALS_BASE64:}
 
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
 logging:
   pattern:
     console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n"

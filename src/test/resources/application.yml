@@ -29,6 +29,9 @@ app:
   email:
     verification-url: http://localhost:5173/verificar-correo
     require-verification: false
+  security:
+    admin-mfa-enabled: false
+    require-persisted-sessions: false
   sms:
     provider: mock
     mock-code: "00000"

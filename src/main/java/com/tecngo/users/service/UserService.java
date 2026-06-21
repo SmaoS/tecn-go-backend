@@ -18,6 +18,7 @@ import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.repository.UserRepository;
 import com.tecngo.phone_auth.service.PhoneNormalizer;
 import com.tecngo.phone_auth.service.PhoneOtpService;
+import com.tecngo.auth.session.AuthSessionService;
 import com.tecngo.shared.exception.ConflictException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ public class UserService {
     private final GeographicCatalogService geographicCatalogs;
     private final PhoneNormalizer phones;
     private final PhoneOtpService phoneOtps;
+    private final AuthSessionService sessions;
 
     @Transactional
     public void updateFcmToken(User user, String token) {
@@ -148,6 +150,7 @@ public class UserService {
                 .user(user)
                 .action("PASSWORD_CHANGED")
                 .build());
+        sessions.revokeAll(user.getId(), "PASSWORD_CHANGED");
         return new PasswordMessageResponse("Contraseña actualizada correctamente.");
     }
 

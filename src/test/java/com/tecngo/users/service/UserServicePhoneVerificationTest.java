@@ -38,7 +38,8 @@ class UserServicePhoneVerificationTest {
                 mock(PasswordSecurityAuditRepository.class),
                 mock(GeographicCatalogService.class),
                 mock(PhoneNormalizer.class),
-                phoneOtps);
+                phoneOtps,
+                mock(com.tecngo.auth.session.AuthSessionService.class));
     }
 
     @Test

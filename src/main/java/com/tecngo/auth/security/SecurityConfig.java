@@ -39,11 +39,14 @@ public class SecurityConfig {
                         .requestMatchers("/v1/auth/register", "/v1/auth/login", "/v1/auth/verify-email",
                                 "/v1/auth/phone/send-otp", "/v1/auth/phone/verify-otp",
                                 "/v1/auth/register-by-phone", "/v1/auth/login-by-phone",
+                                "/v1/auth/mfa/verify",
                                 "/v1/auth/forgot-password", "/v1/auth/reset-password",
-                                "/v1/services/**", "/v1/service-categories/**", "/swagger-ui/**",
+                                "/v1/services/**", "/v1/service-categories/**",
                                 "/v1/catalogs/**",
-                                "/swagger-ui.html", "/v3/api-docs/**", "/actuator/health", "/actuator/info",
+                                "/actuator/health", "/actuator/info",
                                 "/version", "/error", "/webhooks/wompi").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
+                                .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/v1/referrals/validate/**",
                                 "/v1/app-version/check", "/v1/legal/documents/active",
                                 "/v1/legal/documents/public").permitAll()

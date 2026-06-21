@@ -33,7 +33,8 @@ class PasswordRecoveryServiceTest {
     private final PasswordEncoder encoder = mock(PasswordEncoder.class);
     private final EmailSender emails = mock(EmailSender.class);
     private final PasswordRecoveryService service =
-            new PasswordRecoveryService(users, tokens, audits, encoder, emails);
+            new PasswordRecoveryService(users, tokens, audits, encoder, emails,
+                    mock(com.tecngo.auth.session.AuthSessionService.class));
 
     @BeforeEach
     void configure() {

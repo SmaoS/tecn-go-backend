@@ -10,6 +10,7 @@ import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.repository.UserRepository;
 import com.tecngo.verification.service.EmailSender;
+import com.tecngo.auth.session.AuthSessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +38,7 @@ public class PasswordRecoveryService {
     private final PasswordSecurityAuditRepository audits;
     private final PasswordEncoder passwordEncoder;
     private final EmailSender emailSender;
+    private final AuthSessionService sessions;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Value("${app.password-reset.expiration-minutes:30}")
@@ -66,6 +68,7 @@ public class PasswordRecoveryService {
         users.save(user);
         tokens.invalidateActiveByUserId(user.getId(), Instant.now());
         audits.save(PasswordSecurityAudit.builder().user(user).action("PASSWORD_RESET").build());
+        sessions.revokeAll(user.getId(), "PASSWORD_RESET");
         return new PasswordMessageResponse("Contraseña actualizada correctamente.");
     }
 

@@ -25,6 +25,11 @@ import com.tecngo.phone_auth.dto.LoginByPhoneRequest;
 import com.tecngo.phone_auth.dto.RegisterByPhoneRequest;
 import com.tecngo.phone_auth.service.PhoneNormalizer;
 import com.tecngo.phone_auth.service.PhoneOtpService;
+import com.tecngo.auth.mfa.AdminMfaService;
+import com.tecngo.auth.ratelimit.SecurityRateLimitService;
+import com.tecngo.auth.session.AuthSessionService;
+import com.tecngo.auth.mfa.VerifyAdminMfaRequest;
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +44,9 @@ public class AuthService {
     private final ReferralService referrals;
     private final PhoneOtpService phoneOtps;
     private final PhoneNormalizer phones;
+    private final AdminMfaService adminMfa;
+    private final SecurityRateLimitService rateLimits;
+    private final AuthSessionService sessions;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -67,22 +75,30 @@ public class AuthService {
                 "Lee y acepta los términos, políticas y recomendaciones para usar todas las funciones de TecnGo.",
                 NotificationType.LEGAL_ACCEPTANCE_REQUIRED,
                 Map.of("type", "LEGAL", "route", "Legal")));
-        return response(user);
+        return response(user, null, null, false);
     }
 
     public AuthResponse login(LoginRequest request) {
+        return login(request, null, null);
+    }
+
+    public AuthResponse login(LoginRequest request, String clientIp, String userAgent) {
         String email = request.email().trim().toLowerCase();
+        rateLimits.check("LOGIN_EMAIL", email, 10, Duration.ofMinutes(15));
+        rateLimits.check("LOGIN_IP", clientIp, 30, Duration.ofMinutes(15));
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, request.password()));
         } catch (AuthenticationException exception) {
+            rateLimits.record("LOGIN_EMAIL", email);
+            rateLimits.record("LOGIN_IP", clientIp);
             log.warn("Login rejected for {}", email);
             throw new UnauthorizedException("Correo o contraseña incorrectos");
         }
         User user = users.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new UnauthorizedException("Correo o contraseña incorrectos"));
         log.info("Login successful for {}", email);
-        return response(user);
+        return loginResponse(user, clientIp, userAgent);
     }
 
     @Transactional
@@ -112,24 +128,58 @@ public class AuthService {
                 "Lee y acepta los términos, políticas y recomendaciones para usar todas las funciones de TecnGo.",
                 NotificationType.LEGAL_ACCEPTANCE_REQUIRED,
                 Map.of("type", "LEGAL", "route", "Legal")));
-        return response(user);
+        return response(user, null, null, false);
     }
 
     public AuthResponse loginByPhone(LoginByPhoneRequest request) {
+        return loginByPhone(request, null, null);
+    }
+
+    public AuthResponse loginByPhone(LoginByPhoneRequest request, String clientIp, String userAgent) {
         String phone = phones.normalize(request.phone());
-        User user = users.findByPhoneNormalized(phone)
-                .orElseThrow(() -> new UnauthorizedException("Celular o contraseña incorrectos"));
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+        rateLimits.check("LOGIN_PHONE", phone, 10, Duration.ofMinutes(15));
+        rateLimits.check("LOGIN_IP", clientIp, 30, Duration.ofMinutes(15));
+        User user = users.findByPhoneNormalized(phone).orElse(null);
+        if (user == null) {
+            rateLimits.record("LOGIN_PHONE", phone);
+            rateLimits.record("LOGIN_IP", clientIp);
             throw new UnauthorizedException("Celular o contraseña incorrectos");
         }
-        return response(user);
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            rateLimits.record("LOGIN_PHONE", phone);
+            rateLimits.record("LOGIN_IP", clientIp);
+            throw new UnauthorizedException("Celular o contraseña incorrectos");
+        }
+        return loginResponse(user, clientIp, userAgent);
     }
 
     public AuthResponse response(User user) {
-        return new AuthResponse(jwtService.generateToken(user), user.getId(), user.getFullName(),
+        return response(user, null, null, false);
+    }
+
+    public AuthResponse verifyAdminMfa(VerifyAdminMfaRequest request, String clientIp, String userAgent) {
+        User user = adminMfa.verify(request.challengeToken(), request.code());
+        return response(user, clientIp, userAgent, true);
+    }
+
+    private AuthResponse loginResponse(User user, String clientIp, String userAgent) {
+        if (adminMfa.required(user)) {
+            AdminMfaService.Challenge challenge = adminMfa.challenge(user, clientIp);
+            return new AuthResponse(null, user.getId(), user.getFullName(),
+                    user.getEmail(), user.getRole(), user.getEffectiveRoles(), user.getActiveMode(),
+                    user.getVerificationStatus(), user.isEmailVerified(), user.isPhoneVerified(),
+                    user.isDocumentsVerified(), user.isOnboardingCompleted(),
+                    true, challenge.token(), challenge.expiresAt());
+        }
+        return response(user, clientIp, userAgent, false);
+    }
+
+    private AuthResponse response(User user, String clientIp, String userAgent, boolean mfaVerified) {
+        return new AuthResponse(sessions.issue(user, clientIp, userAgent, mfaVerified),
+                user.getId(), user.getFullName(),
                 user.getEmail(), user.getRole(), user.getEffectiveRoles(), user.getActiveMode(),
                 user.getVerificationStatus(),
                 user.isEmailVerified(), user.isPhoneVerified(), user.isDocumentsVerified(),
-                user.isOnboardingCompleted());
+                user.isOnboardingCompleted(), false, null, null);
     }
 }

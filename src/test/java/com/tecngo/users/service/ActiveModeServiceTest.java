@@ -1,6 +1,7 @@
 package com.tecngo.users.service;
 
 import com.tecngo.auth.service.JwtService;
+import com.tecngo.auth.session.AuthSessionService;
 import com.tecngo.users.entity.ActiveMode;
 import com.tecngo.users.entity.OnboardingStep;
 import com.tecngo.users.entity.Role;
@@ -28,7 +29,7 @@ class ActiveModeServiceTest {
         users = mock(UserRepository.class);
         audits = mock(ActiveModeAuditService.class);
         jwtService = mock(JwtService.class);
-        service = new ActiveModeService(users, audits, jwtService);
+        service = new ActiveModeService(users, audits, jwtService, mock(AuthSessionService.class));
     }
 
     @Test

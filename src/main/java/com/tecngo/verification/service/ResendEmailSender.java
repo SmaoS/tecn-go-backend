@@ -42,6 +42,20 @@ public class ResendEmailSender implements EmailSender {
                 "Password recovery", resetUrl);
     }
 
+    @Override
+    public void sendMfaCode(String recipient, String recipientName, String code, long expirationMinutes) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("Resend API key is required for administrative MFA");
+        }
+        send(recipient, "Código de seguridad de TecnGo",
+                "<p>Hola " + escape(recipientName) + ",</p>"
+                        + "<p>Tu código de acceso administrativo es:</p>"
+                        + "<p style=\"font-size:28px;font-weight:bold;letter-spacing:6px\">" + code + "</p>"
+                        + "<p>Expira en " + expirationMinutes + " minutos.</p>"
+                        + "<p>Si no intentaste ingresar, cambia tu contraseña inmediatamente.</p>",
+                "Administrative MFA", "MFA code: " + code);
+    }
+
     private void send(String recipient, String subject, String html, String operation, String fallbackUrl) {
         if (apiKey == null || apiKey.isBlank()) {
             log.info("{} for {}: {}", operation, recipient, fallbackUrl);

@@ -55,7 +55,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TooManyRequestsException.class)
     @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
     ApiError tooManyRequests(TooManyRequestsException ex) {
-        return error(HttpStatus.TOO_MANY_REQUESTS, "OTP_RATE_LIMITED", ex.getMessage(), null);
+        return error(HttpStatus.TOO_MANY_REQUESTS, ex.getCode(), ex.getMessage(), null);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

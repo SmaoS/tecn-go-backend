@@ -6,6 +6,7 @@ import com.tecngo.users.entity.VerificationStatus;
 
 import java.util.Set;
 import java.util.UUID;
+import java.time.Instant;
 
 public record AuthResponse(
         String token,
@@ -19,5 +20,8 @@ public record AuthResponse(
         boolean emailVerified,
         boolean phoneVerified,
         boolean documentsVerified,
-        boolean onboardingCompleted
+        boolean onboardingCompleted,
+        boolean mfaRequired,
+        String mfaChallengeToken,
+        Instant mfaExpiresAt
 ) {}

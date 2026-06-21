@@ -4,4 +4,6 @@ public interface EmailSender {
     void sendVerification(String recipient, String recipientName, String verificationUrl);
 
     void sendPasswordReset(String recipient, String recipientName, String resetUrl);
+
+    void sendMfaCode(String recipient, String recipientName, String code, long expirationMinutes);
 }

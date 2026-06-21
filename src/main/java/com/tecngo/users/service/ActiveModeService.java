@@ -1,6 +1,7 @@
 package com.tecngo.users.service;
 
 import com.tecngo.auth.service.JwtService;
+import com.tecngo.auth.session.AuthSessionService;
 import com.tecngo.shared.exception.ForbiddenException;
 import com.tecngo.users.dto.ActiveModeResponse;
 import com.tecngo.users.entity.ActiveMode;
@@ -18,9 +19,16 @@ public class ActiveModeService {
     private final UserRepository users;
     private final ActiveModeAuditService audits;
     private final JwtService jwtService;
+    private final AuthSessionService sessions;
 
     @Transactional
     public ActiveModeResponse change(User authenticatedUser, ActiveMode requestedMode) {
+        return change(authenticatedUser, requestedMode, null);
+    }
+
+    @Transactional
+    public ActiveModeResponse change(User authenticatedUser, ActiveMode requestedMode,
+                                     java.util.UUID sessionId) {
         User user = users.findById(authenticatedUser.getId())
                 .orElseThrow(() -> new ForbiddenException("Authenticated user no longer exists"));
 
@@ -43,7 +51,7 @@ public class ActiveModeService {
         }
 
         return new ActiveModeResponse(
-                jwtService.generateToken(user),
+                sessionId == null ? jwtService.generateToken(user) : sessions.renewToken(user, sessionId),
                 user.getRole(),
                 user.getEffectiveRoles(),
                 user.getActiveMode(),

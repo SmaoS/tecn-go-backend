@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
+import com.tecngo.auth.security.JwtAuthenticationFilter;
 
 @RestController
 @RequestMapping("/v1/users")
@@ -56,7 +58,10 @@ public class UserController {
 
     @PutMapping("/me/active-mode")
     public ActiveModeResponse changeActiveMode(@Valid @RequestBody ChangeActiveModeRequest request,
-                                               @AuthenticationPrincipal User user) {
-        return activeModes.change(user, request.mode());
+                                               @AuthenticationPrincipal User user,
+                                               HttpServletRequest servletRequest) {
+        Object value = servletRequest.getAttribute(JwtAuthenticationFilter.SESSION_ID_ATTRIBUTE);
+        return activeModes.change(user, request.mode(),
+                value instanceof java.util.UUID id ? id : null);
     }
 }

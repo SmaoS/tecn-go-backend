@@ -17,6 +17,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class JwtService {
@@ -30,6 +31,11 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails user) {
+        Instant now = Instant.now();
+        return generateToken(user, UUID.randomUUID(), now.plusMillis(expirationMs));
+    }
+
+    public String generateToken(UserDetails user, UUID sessionId, Instant expiresAt) {
         Instant now = Instant.now();
         List<String> roles = user.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -51,8 +57,9 @@ public class JwtService {
                 .subject(user instanceof User tecngoUser && tecngoUser.getId() != null
                         ? tecngoUser.getId().toString()
                         : user.getUsername())
+                .id(sessionId.toString())
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusMillis(expirationMs)))
+                .expiration(Date.from(expiresAt))
                 .signWith(key())
                 .compact();
     }
@@ -76,6 +83,11 @@ public class JwtService {
 
     public String extractActiveMode(String token) {
         return claims(token).get("active_mode", String.class);
+    }
+
+    public UUID extractSessionId(String token) {
+        String id = claims(token).getId();
+        return id == null || id.isBlank() ? null : UUID.fromString(id);
     }
 
     public boolean isValid(String token, UserDetails user) {

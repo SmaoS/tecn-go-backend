@@ -33,6 +33,9 @@ public class UserOperationGuard {
 
     private boolean isAlwaysAllowed(String method, String path) {
         return path.equals("/v1/auth/send-email-verification")
+                || path.equals("/v1/auth/logout")
+                || path.equals("/v1/auth/logout-all")
+                || path.startsWith("/v1/users/me/sessions")
                 || path.equals("/v1/users/me/profile")
                 || path.equals("/v1/users/me/phone-verification")
                 || path.equals("/v1/users/me/onboarding-status")

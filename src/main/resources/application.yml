@@ -56,6 +56,10 @@ app:
     require-verification: ${REQUIRE_EMAIL_VERIFICATION:false}
   onboarding:
     require-completion: ${REQUIRE_ONBOARDING_COMPLETION:false}
+  security:
+    admin-mfa-enabled: ${ADMIN_MFA_ENABLED:true}
+    admin-mfa-expiration-minutes: ${ADMIN_MFA_EXPIRATION_MINUTES:10}
+    require-persisted-sessions: ${REQUIRE_PERSISTED_SESSIONS:true}
   password-reset:
     expiration-minutes: ${PASSWORD_RESET_TOKEN_MINUTES:30}
     url: ${PASSWORD_RESET_URL:${FRONTEND_URL:http://localhost:5173}/reset-password}
@@ -123,7 +127,10 @@ info:
     environment: ${APP_ENVIRONMENT:${SPRING_PROFILES_ACTIVE:unknown}}
 
 springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
   swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
     path: /swagger-ui.html
 
 management:
