@@ -13,9 +13,9 @@ import com.tecngo.verification.service.EmailVerificationService;
 import com.tecngo.users.entity.ActiveMode;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -41,8 +41,31 @@ class ServiceRequestSelfActionGuardTest {
     private LegalService legal;
     @Mock
     private EmailVerificationService emailVerification;
-    @InjectMocks
-    private ServiceRequestService service;
+    @Mock
+    private com.tecngo.technicians.service.TechnicianProfileService technicianProfiles;
+    @Mock
+    private com.tecngo.technicians.repository.TechnicianProfileRepository technicianProfileRepository;
+    @Mock
+    private com.tecngo.service_requests.repository.ServiceRequestImageRepository images;
+    @Mock
+    private com.tecngo.system_parameters.service.SystemParameterService parameters;
+    @Mock
+    private com.tecngo.technician_wallet.service.TechnicianWalletService wallets;
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher events;
+    @Mock
+    private com.tecngo.geolocation.HaversineDistance distance;
+    private ServiceQuoteService service;
+
+    @BeforeEach
+    void setUp() {
+        ServiceRequestAccessPolicy access = new ServiceRequestAccessPolicy(userAccess, legal);
+        ServiceRequestAssembler assembler = new ServiceRequestAssembler(images, technicianProfileRepository);
+        ServiceRequestNotifier notifier = new ServiceRequestNotifier(events, technicianProfileRepository, distance);
+        service = new ServiceQuoteService(
+                requests, quotes, technicianProfiles, emailVerification, parameters, wallets,
+                access, assembler, notifier);
+    }
 
     @Test
     void dualRoleUserCannotQuoteOwnRequest() {

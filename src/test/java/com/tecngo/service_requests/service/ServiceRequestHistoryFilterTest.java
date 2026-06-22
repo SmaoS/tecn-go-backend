@@ -5,9 +5,9 @@ import com.tecngo.service_requests.repository.ServiceRequestRepository;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -34,7 +34,17 @@ class ServiceRequestHistoryFilterTest {
     @Mock com.tecngo.technician_location.repository.TechnicianLocationRepository technicianLocations;
     @Mock com.tecngo.users.service.UserAccessService userAccess;
     @Mock com.tecngo.legal.service.LegalService legal;
-    @InjectMocks ServiceRequestService service;
+    @Mock com.tecngo.catalogs.service.GeographicCatalogService geographicCatalogs;
+    ServiceRequestQueryService service;
+
+    @BeforeEach
+    void setUp() {
+        ServiceRequestAccessPolicy access = new ServiceRequestAccessPolicy(userAccess, legal);
+        ServiceRequestAssembler assembler = new ServiceRequestAssembler(images, technicianProfileRepository);
+        service = new ServiceRequestQueryService(
+                requests, technicianProfiles, distance, emailVerification, parameters, technicianLocations,
+                userAccess, geographicCatalogs, access, assembler);
+    }
 
     @Test
     void clientActiveRequestsExcludePaidAndCancelled() {

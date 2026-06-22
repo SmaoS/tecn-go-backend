@@ -10,10 +10,11 @@ import com.tecngo.technicians.entity.TechnicianProfile;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -43,7 +44,17 @@ class ServiceRequestCityFilterTest {
     @Mock com.tecngo.users.service.UserAccessService userAccess;
     @Mock com.tecngo.legal.service.LegalService legal;
     @Mock com.tecngo.catalogs.service.GeographicCatalogService geographicCatalogs;
-    @InjectMocks ServiceRequestService service;
+    ServiceRequestQueryService service;
+
+    @BeforeEach
+    void setUp() {
+        ServiceRequestAccessPolicy access = new ServiceRequestAccessPolicy(userAccess, legal);
+        ServiceRequestAssembler assembler = new ServiceRequestAssembler(images, technicianProfileRepository);
+        service = new ServiceRequestQueryService(
+                requests, technicianProfiles, distance, emailVerification, parameters, technicianLocations,
+                userAccess, geographicCatalogs, access, assembler);
+        ReflectionTestUtils.setField(service, "availableRequestCandidateLimit", 500);
+    }
 
     @Test
     void availableRequestsUseTechnicianCityAndExposeOnlyApproximateLocation() {

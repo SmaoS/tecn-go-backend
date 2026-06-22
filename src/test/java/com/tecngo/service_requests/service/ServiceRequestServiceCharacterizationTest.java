@@ -42,7 +42,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -84,7 +83,7 @@ class ServiceRequestServiceCharacterizationTest {
     @Mock ReferralService referrals;
     @Mock UserReportRepository reports;
     @Mock TechnicianWalletService wallets;
-    @InjectMocks ServiceRequestService service;
+    ServiceRequestService service;
 
     private ServiceCategory category;
     private City city;
@@ -93,14 +92,30 @@ class ServiceRequestServiceCharacterizationTest {
 
     @BeforeEach
     void setUp() {
+        ServiceRequestAccessPolicy access = new ServiceRequestAccessPolicy(userAccess, legal);
+        ServiceRequestAssembler assembler = new ServiceRequestAssembler(images, technicianProfileRepository);
+        ServiceRequestNotifier notifier = new ServiceRequestNotifier(events, technicianProfileRepository, distance);
+        ServiceRequestCommandService commands = new ServiceRequestCommandService(
+                requests, categories, geographicCatalogs, emailVerification, access, notifier, assembler);
+        ServiceRequestQueryService queries = new ServiceRequestQueryService(
+                requests, technicianProfiles, distance, emailVerification, parameters, technicianLocations,
+                userAccess, geographicCatalogs, access, assembler);
+        ServiceQuoteService quoteService = new ServiceQuoteService(
+                requests, quotes, technicianProfiles, emailVerification, parameters, wallets,
+                access, assembler, notifier);
+        ServiceLifecycleService lifecycle = new ServiceLifecycleService(
+                requests, payments, feeCalculator, referrals, reports, wallets, parameters,
+                access, assembler, notifier);
+        service = new ServiceRequestService(commands, queries, quoteService, lifecycle);
+
         category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").active(true).build();
         city = City.builder().id(UUID.randomUUID()).name("Villavicencio").build();
         client = user(Role.CLIENT, "Cliente");
         client.setDocumentPhotoUrl("/private/document");
         client.setCity(city);
         technician = user(Role.TECHNICIAN, "Técnico");
-        ReflectionTestUtils.setField(service, "newRequestRadiusKm", 25d);
-        ReflectionTestUtils.setField(service, "availableRequestCandidateLimit", 500);
+        ReflectionTestUtils.setField(notifier, "newRequestRadiusKm", 25d);
+        ReflectionTestUtils.setField(queries, "availableRequestCandidateLimit", 500);
     }
 
     @Test

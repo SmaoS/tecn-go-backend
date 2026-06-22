@@ -544,7 +544,18 @@ La configuración completa de alertas y dashboards está en
 
 ## Calidad
 
-La caracterización previa a la división de `ServiceRequestService` protege:
+`ServiceRequestService` es una fachada estable para los controladores. La lógica del
+módulo está dividida por responsabilidad:
+
+- `ServiceRequestCommandService`: creación de solicitudes;
+- `ServiceRequestQueryService`: consultas, historial, paginación y disponibilidad;
+- `ServiceQuoteService`: creación, aceptación y rechazo de cotizaciones;
+- `ServiceLifecycleService`: estados, cierre técnico, pagos y disputas;
+- `ServiceRequestAccessPolicy`: autorización y reglas de participación;
+- `ServiceRequestAssembler`: construcción agrupada de DTO sin consultas N+1;
+- `ServiceRequestNotifier`: publicación de eventos del flujo.
+
+La caracterización de `ServiceRequestService` protege:
 
 - creación y requisitos del perfil del cliente;
 - búsqueda por ciudad, categoría, radio y ubicación aproximada;
@@ -556,8 +567,8 @@ La caracterización previa a la división de `ServiceRequestService` protege:
 - exclusión de imágenes no aprobadas;
 - carga agrupada de imágenes y categorías para evitar N+1.
 
-Estos tests describen el comportamiento existente. La división del servicio debe
-mantenerlos sin modificar sus resultados observables.
+Estos tests describen el comportamiento observable que la fachada y los servicios
+especializados deben conservar.
 
 ```bash
 mvn verify
