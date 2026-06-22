@@ -100,8 +100,8 @@ public class LegalService {
         return documents.findByActiveTrueOrderByCodeAsc().stream().filter(item -> applies(item, user)).toList();
     }
     private boolean applies(LegalDocument item, User user) {
-        return item.getRoleTarget() == LegalRoleTarget.ALL
-                || item.getRoleTarget().name().equals(user.getRole().name());
+        if (item.getRoleTarget() == LegalRoleTarget.ALL) return true;
+        return user.hasRole(Role.valueOf(item.getRoleTarget().name()));
     }
     private void deactivateCurrent(String code, LegalRoleTarget role) {
         documents.findByCodeAndRoleTargetAndActiveTrue(code, role).ifPresent(item -> item.setActive(false));

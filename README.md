@@ -573,3 +573,7 @@ GET  /v1/admin/compliance/access-audits
 Configure `COMPLIANCE_AUDIT_HMAC_SECRET` con un secreto independiente y
 `COMPLIANCE_RETENTION_CRON` con la programación deseada. La guía operativa completa
 está en `tecngo-infra/COMPLIANCE.md`.
+
+La migración `V37` actualiza privacidad, tratamiento de datos y términos para
+declarar moderación automatizada, revisión humana, inventario de datos y derechos de
+autor. También publica `PRIVACY_LABEL`, disponible para la ficha de Google Play.
