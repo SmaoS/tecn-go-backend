@@ -46,7 +46,7 @@ public class ServiceLifecycleService {
     @Transactional
     public ServiceRequestResponse updateStatus(UUID id, RequestStatus nextStatus, User user) {
         access.requireCriticalAccess(user);
-        ServiceRequest request = find(id);
+        ServiceRequest request = lockedRequest(id);
         if (nextStatus == RequestStatus.CANCELLED && user.isActiveAs(Role.CLIENT)) {
             access.requireClientOwner(request, user);
             if (request.getStatus() == RequestStatus.COMPLETED || request.getStatus() == RequestStatus.PAID
@@ -78,11 +78,12 @@ public class ServiceLifecycleService {
                 .orElseThrow(() -> new NotFoundException("Service request not found"));
         access.requireAssignedTechnician(request, technician);
         validateClosable(request);
+        boolean alreadyCompleted = request.getStatus() == RequestStatus.COMPLETED;
         if (paymentReceived) {
             createPaidPayment(request,
                     paymentMethod == null ? request.getRequestedPaymentMethod() : paymentMethod);
             request.setStatus(RequestStatus.PAID);
-            incrementCompleted(request);
+            if (!alreadyCompleted) incrementCompleted(request);
             request.getClient().setPaidServicesCount(request.getClient().getPaidServicesCount() + 1);
             request.getTechnician().setPaidServicesCount(request.getTechnician().getPaidServicesCount() + 1);
             notifier.paymentConfirmed(request);
@@ -161,8 +162,8 @@ public class ServiceLifecycleService {
         request.getTechnician().setCompletedServicesCount(request.getTechnician().getCompletedServicesCount() + 1);
     }
 
-    private ServiceRequest find(UUID id) {
-        return requests.findById(id)
+    private ServiceRequest lockedRequest(UUID id) {
+        return requests.findByIdForUpdate(id)
                 .orElseThrow(() -> new NotFoundException("Service request not found"));
     }
 

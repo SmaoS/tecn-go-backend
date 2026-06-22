@@ -285,7 +285,7 @@ class ServiceRequestServiceCharacterizationTest {
     void clientCanCancelAssignedRequestAndNotifyTechnician() {
         ServiceRequest request = request(RequestStatus.QUOTE_ACCEPTED);
         request.setTechnician(technician);
-        when(requests.findById(request.getId())).thenReturn(Optional.of(request));
+        when(requests.findByIdForUpdate(request.getId())).thenReturn(Optional.of(request));
         when(images.findByServiceRequestIdInOrderByCreatedAtAsc(anyList())).thenReturn(List.of());
         when(technicianProfileRepository.findWithCategoriesByUserIdIn(any())).thenReturn(List.of());
 
@@ -303,7 +303,7 @@ class ServiceRequestServiceCharacterizationTest {
     void technicianStatusTransitionCompletesServiceAndIncrementsBothCounters() {
         ServiceRequest request = request(RequestStatus.IN_PROGRESS);
         request.setTechnician(technician);
-        when(requests.findById(request.getId())).thenReturn(Optional.of(request));
+        when(requests.findByIdForUpdate(request.getId())).thenReturn(Optional.of(request));
         when(images.findByServiceRequestIdInOrderByCreatedAtAsc(anyList())).thenReturn(List.of());
         when(technicianProfileRepository.findWithCategoriesByUserIdIn(any())).thenReturn(List.of());
 
@@ -322,7 +322,7 @@ class ServiceRequestServiceCharacterizationTest {
     void invalidTechnicianStatusTransitionIsRejectedWithoutMutation() {
         ServiceRequest request = request(RequestStatus.QUOTE_ACCEPTED);
         request.setTechnician(technician);
-        when(requests.findById(request.getId())).thenReturn(Optional.of(request));
+        when(requests.findByIdForUpdate(request.getId())).thenReturn(Optional.of(request));
 
         assertThatThrownBy(() -> service.updateStatus(request.getId(), RequestStatus.COMPLETED, technician))
                 .isInstanceOf(ConflictException.class)

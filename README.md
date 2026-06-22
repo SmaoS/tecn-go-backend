@@ -305,6 +305,26 @@ a `PUT /api/v1/service-requests/{id}/confirm-quote`. La oferta seleccionada pasa
 `QUOTE_ACCEPTED`. El bloqueo pesimista de la solicitud impide que se acepten dos
 cotizaciones concurrentemente.
 
+## Integración y concurrencia
+
+Las mutaciones críticas bloquean la fila de `service_requests` con
+`PESSIMISTIC_WRITE`. Esto serializa:
+
+- aceptación o rechazo de cotizaciones;
+- cancelación y transiciones de estado;
+- cierre técnico, disputa y confirmación de pago;
+- pagos y calificaciones ejecutados desde sus módulos.
+
+PostgreSQL agrega defensas adicionales: un pago por solicitud, una cotización
+pendiente por técnico y una sola cotización aceptada por solicitud. La confirmación
+de pago no vuelve a incrementar servicios completados cuando el estado ya era
+`COMPLETED`.
+
+`ServiceRequestConcurrencyIntegrationTest` ejecuta dos transacciones reales en
+paralelo y verifica que solo una pueda aceptar una oferta, cambiar el mismo estado o
+cerrar el pago. La segunda operación recibe conflicto y no duplica pagos ni
+contadores.
+
 ## Pagos y calificaciones
 
 El MVP registra pagos en efectivo cuando el servicio está `COMPLETED`. La comisión se
