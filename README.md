@@ -544,6 +544,21 @@ La configuración completa de alertas y dashboards está en
 
 ## Calidad
 
+La caracterización previa a la división de `ServiceRequestService` protege:
+
+- creación y requisitos del perfil del cliente;
+- búsqueda por ciudad, categoría, radio y ubicación aproximada;
+- cotizaciones nuevas, duplicadas, vencidas, aceptadas y rechazadas;
+- prevención de autocotización y autoaceptación;
+- transiciones de estado y cancelación;
+- pago confirmado, comisión, recompensa por referido, duplicados y disputas;
+- eventos de notificación;
+- exclusión de imágenes no aprobadas;
+- carga agrupada de imágenes y categorías para evitar N+1.
+
+Estos tests describen el comportamiento existente. La división del servicio debe
+mantenerlos sin modificar sus resultados observables.
+
 ```bash
 mvn verify
 ```
