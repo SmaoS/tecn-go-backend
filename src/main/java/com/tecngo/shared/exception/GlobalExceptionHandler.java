@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     ApiError conflict(ConflictException ex) {
-        return error(HttpStatus.CONFLICT, null, ex.getMessage(), null);
+        return error(HttpStatus.CONFLICT, ex.getCode(), ex.getMessage(), null);
     }
 
     @ExceptionHandler(ForbiddenException.class)

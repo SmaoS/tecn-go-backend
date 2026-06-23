@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,6 +46,20 @@ class LegalServiceTest {
 
         assertThat(result).extracting(item -> item.code())
                 .containsExactly("CLIENT_TERMS", "TECHNICIAN_TERMS", "PRIVACY_POLICY");
+    }
+
+    @Test
+    void requireAcceptedReturnsStableCodeForClientsWithPendingDocuments() {
+        User user = User.builder().id(UUID.randomUUID()).role(Role.CLIENT).roles(Set.of(Role.CLIENT)).build();
+        LegalDocument privacy = document("PRIVACY_POLICY", LegalRoleTarget.ALL);
+        when(parameters.requireLegalAcceptance()).thenReturn(true);
+        when(documents.findByActiveTrueOrderByCodeAsc()).thenReturn(List.of(privacy));
+
+        assertThatThrownBy(() -> service.requireAccepted(user))
+                .isInstanceOf(com.tecngo.shared.exception.ConflictException.class)
+                .satisfies(error -> assertThat(
+                        ((com.tecngo.shared.exception.ConflictException) error).getCode())
+                        .isEqualTo("LEGAL_ACCEPTANCE_REQUIRED"));
     }
 
     private LegalDocument document(String code, LegalRoleTarget roleTarget) {

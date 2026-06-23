@@ -55,15 +55,30 @@ public class LegalService {
     @Transactional(readOnly = true)
     public void requireAccepted(User user) {
         if (!parameters.requireLegalAcceptance() || user.getRole() == Role.ADMIN || user.getRole() == Role.VERIFIER) return;
-        if (!status(user).complete()) throw new ConflictException("Accept required legal documents before continuing");
+        if (!status(user).complete()) {
+            throw new ConflictException("LEGAL_ACCEPTANCE_REQUIRED",
+                    "Debes leer y aceptar los términos y condiciones vigentes para continuar");
+        }
     }
     @Transactional
     public void acceptAll(User user) {
+        acceptAll(user, null);
+    }
+    @Transactional
+    public LegalStatusResponse acceptAll(User user, HttpServletRequest request) {
         applicable(user).forEach(document -> {
             if (!acceptances.existsByUserIdAndLegalDocumentId(user.getId(), document.getId())) {
-                acceptances.save(LegalAcceptance.builder().user(user).legalDocument(document).build());
+                LegalAcceptance.LegalAcceptanceBuilder acceptance = LegalAcceptance.builder()
+                        .user(user)
+                        .legalDocument(document);
+                if (request != null) {
+                    acceptance.ipAddress(request.getRemoteAddr())
+                            .userAgent(request.getHeader("User-Agent"));
+                }
+                acceptances.save(acceptance.build());
             }
         });
+        return status(user);
     }
     @Transactional(readOnly = true)
     public List<LegalDocumentResponse> adminList(User admin) {
