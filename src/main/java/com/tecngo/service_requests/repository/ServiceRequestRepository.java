@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.Set;
+import java.time.Instant;
 
 public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, UUID> {
     List<ServiceRequest> findByClientIdOrderByCreatedAtDesc(UUID clientId);
@@ -72,4 +73,9 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select request from ServiceRequest request where request.id = :id")
     Optional<ServiceRequest> findByIdForUpdate(@Param("id") UUID id);
+
+    @EntityGraph(attributePaths = {"client", "category"})
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<ServiceRequest> findByStatusAndExpiresAtLessThanEqual(
+            RequestStatus status, Instant expiresAt);
 }

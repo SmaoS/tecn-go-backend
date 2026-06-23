@@ -5,6 +5,7 @@ import com.tecngo.referrals.repository.*;
 import com.tecngo.service_requests.entity.ServiceRequest;
 import com.tecngo.system_parameters.service.SystemParameterService;
 import com.tecngo.users.entity.User;
+import com.tecngo.users.entity.Role;
 import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.*;
@@ -17,6 +18,20 @@ class ReferralServiceTest {
     private final ReferralRewardRepository rewards = mock(ReferralRewardRepository.class);
     private final SystemParameterService parameters = mock(SystemParameterService.class);
     private final ReferralService service = new ReferralService(codes, registrations, rewards, parameters);
+
+    @Test
+    void createsReferralCodeForClient() {
+        User client = User.builder().id(UUID.randomUUID()).role(Role.CLIENT).fullName("Cliente").build();
+        when(codes.findByTechnicianId(client.getId())).thenReturn(Optional.empty());
+        when(codes.existsByCodeIgnoreCase(anyString())).thenReturn(false);
+        when(codes.save(any(ReferralCode.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ReferralCode code = service.ensureCode(client);
+
+        assertThat(code.getTechnician()).isSameAs(client);
+        assertThat(code.getCode()).startsWith("TG-");
+        assertThat(code.isActive()).isTrue();
+    }
 
     @Test
     void doesNotConsumeRewardWhenCommissionIsZero() {

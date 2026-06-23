@@ -28,12 +28,12 @@ public class ReferralService {
     private final SecureRandom random = new SecureRandom();
 
     @Transactional
-    public ReferralCode ensureCode(User technician) {
-        if (!technician.isActiveAs(Role.TECHNICIAN)) {
-            throw new IllegalArgumentException("Referral codes are only for active technician mode");
+    public ReferralCode ensureCode(User referrer) {
+        if (!referrer.hasRole(Role.CLIENT) && !referrer.hasRole(Role.TECHNICIAN)) {
+            throw new IllegalArgumentException("Referral codes are only for clients and technicians");
         }
-        return codes.findByTechnicianId(technician.getId()).orElseGet(() -> codes.save(ReferralCode.builder()
-                .technician(technician).code(nextCode()).active(true).build()));
+        return codes.findByTechnicianId(referrer.getId()).orElseGet(() -> codes.save(ReferralCode.builder()
+                .technician(referrer).code(nextCode()).active(true).build()));
     }
 
     @Transactional
@@ -47,7 +47,7 @@ public class ReferralService {
             throw new ConflictException("No puedes usar tu propio código de referido");
         }
         if (registrations.findByReferredUserId(referred.getId()).isPresent()) {
-            throw new ConflictException("El usuario ya tiene un técnico referidor");
+            throw new ConflictException("El usuario ya tiene un referidor");
         }
         registrations.save(ReferralRegistration.builder().referralCode(code)
                 .referrerTechnician(code.getTechnician()).referredUser(referred)
@@ -103,7 +103,7 @@ public class ReferralService {
     }
 
     @Transactional
-    public ReferralCodeResponse mine(User technician) { return codeResponse(ensureCode(technician)); }
+    public ReferralCodeResponse mine(User referrer) { return codeResponse(ensureCode(referrer)); }
     @Transactional(readOnly = true)
     public List<ReferralRegistrationResponse> myReferrals(User technician) {
         return registrations.findByReferrerTechnicianIdOrderByCreatedAtDesc(technician.getId()).stream().map(this::registrationResponse).toList();

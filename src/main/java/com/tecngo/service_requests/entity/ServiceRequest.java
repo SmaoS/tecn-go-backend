@@ -51,10 +51,13 @@ public class ServiceRequest {
     private RequestStatus status;
     @Column(nullable = false)
     private Instant createdAt;
+    @Column(nullable = false)
+    private Instant expiresAt;
 
     @PrePersist
     void onCreate() {
         if (status == null) status = RequestStatus.QUOTE_PENDING;
         if (createdAt == null) createdAt = Instant.now();
+        if (expiresAt == null) expiresAt = createdAt.plusSeconds(24 * 60 * 60);
     }
 }

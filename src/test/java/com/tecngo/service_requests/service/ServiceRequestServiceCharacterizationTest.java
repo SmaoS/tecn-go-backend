@@ -96,7 +96,8 @@ class ServiceRequestServiceCharacterizationTest {
         ServiceRequestAssembler assembler = new ServiceRequestAssembler(images, technicianProfileRepository);
         ServiceRequestNotifier notifier = new ServiceRequestNotifier(events, technicianProfileRepository, distance);
         ServiceRequestCommandService commands = new ServiceRequestCommandService(
-                requests, categories, geographicCatalogs, emailVerification, access, notifier, assembler);
+                requests, categories, geographicCatalogs, emailVerification, access, notifier, assembler,
+                parameters);
         ServiceRequestQueryService queries = new ServiceRequestQueryService(
                 requests, technicianProfiles, distance, emailVerification, parameters, technicianLocations,
                 userAccess, geographicCatalogs, access, assembler);

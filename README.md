@@ -286,10 +286,17 @@ Parámetros administrables:
 - `SERVICE_SEARCH_USE_RADIUS=false`
 - `SERVICE_SEARCH_DEFAULT_RADIUS_KM=10`
 - `SERVICE_SEARCH_MAX_RADIUS_KM=50`
+- `SERVICE_REQUEST_EXPIRATION_HOURS=24`
 
 Cada técnico aprobado puede tener una sola cotización pendiente por solicitud. Una
 cotización expira según `QUOTE_EXPIRATION_MINUTES`; después de rechazo o expiración el
 técnico puede crear otra. Un proceso idempotente marca vencimientos cada minuto.
+
+Las solicitudes que siguen en `QUOTE_PENDING` vencen según el parámetro administrativo
+`SERVICE_REQUEST_EXPIRATION_HOURS`. Un job las cancela automáticamente, deja de
+mostrarlas a técnicos y notifica al cliente. El valor puede cambiarse desde
+**ADMIN → Configuración → Parámetros del sistema**; la variable de entorno es solo
+el fallback cuando el parámetro aún no existe.
 
 El cliente consulta todas las ofertas con
 `GET /api/v1/service-requests/{id}/quotes` y selecciona una enviando:
@@ -412,7 +419,8 @@ push FCM.
 
 ## Referidos y versiones de app
 
-La migración `V16` crea códigos únicos para técnicos, registros de referidos,
+La migración `V16` crea códigos únicos y la migración `V39` habilita su uso para
+clientes y técnicos, junto con registros de referidos,
 beneficios de servicio sin comisión y configuración de versiones Android/iOS.
 El registro acepta `referralCode` opcional. Un referido genera un único beneficio
 cuando participa en un servicio pagado con calificación de 5 estrellas.
@@ -425,6 +433,9 @@ Endpoints principales:
 
 ```text
 GET /v1/referrals/validate/{code}
+GET /v1/users/me/referral-code
+GET /v1/users/me/referrals
+GET /v1/users/me/referral-rewards
 GET /v1/technicians/me/referral-code
 GET /v1/technicians/me/referrals
 GET /v1/technicians/me/referral-rewards

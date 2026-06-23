@@ -17,6 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SystemParameterService {
     public static final String QUOTE_EXPIRATION_MINUTES = "QUOTE_EXPIRATION_MINUTES";
+    public static final String SERVICE_REQUEST_EXPIRATION_HOURS = "SERVICE_REQUEST_EXPIRATION_HOURS";
     public static final String PLATFORM_COMMISSION_PERCENTAGE = "PLATFORM_COMMISSION_PERCENTAGE";
     public static final String TECHNICIAN_OFFLINE_AFTER_MINUTES = "TECHNICIAN_OFFLINE_AFTER_MINUTES";
     public static final String LOCATION_POLLING_SECONDS = "LOCATION_POLLING_SECONDS";
@@ -50,6 +51,8 @@ public class SystemParameterService {
 
     @Value("${app.parameters.quote-expiration-minutes:10}")
     private int quoteExpirationFallback;
+    @Value("${app.parameters.service-request-expiration-hours:24}")
+    private int serviceRequestExpirationFallback;
     @Value("${app.parameters.platform-commission-percentage:0}")
     private BigDecimal commissionFallback;
     @Value("${app.parameters.technician-offline-after-minutes:3}")
@@ -90,6 +93,9 @@ public class SystemParameterService {
 
     public int quoteExpirationMinutes() {
         return integer(QUOTE_EXPIRATION_MINUTES, quoteExpirationFallback);
+    }
+    public int serviceRequestExpirationHours() {
+        return integer(SERVICE_REQUEST_EXPIRATION_HOURS, serviceRequestExpirationFallback);
     }
 
     public BigDecimal platformCommissionPercentage() {
@@ -183,6 +189,11 @@ public class SystemParameterService {
         if (parameter.getKey().equals(QUOTE_EXPIRATION_MINUTES)
                 && (number.intValue() < 1 || number.intValue() > 60)) {
             throw new IllegalArgumentException("QUOTE_EXPIRATION_MINUTES must be between 1 and 60");
+        }
+        if (parameter.getKey().equals(SERVICE_REQUEST_EXPIRATION_HOURS)
+                && (number.intValue() < 1 || number.intValue() > 720)) {
+            throw new IllegalArgumentException(
+                    "SERVICE_REQUEST_EXPIRATION_HOURS must be between 1 and 720");
         }
         if (parameter.getKey().equals(PLATFORM_COMMISSION_PERCENTAGE)
                 && (number.compareTo(BigDecimal.ZERO) < 0

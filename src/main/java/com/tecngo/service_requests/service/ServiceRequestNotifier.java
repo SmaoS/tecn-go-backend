@@ -94,6 +94,13 @@ public class ServiceRequestNotifier {
                 NotificationType.SERVICE_STATUS_CHANGED, requestData(request));
     }
 
+    public void expired(ServiceRequest request) {
+        publish(request.getClient(), "Solicitud vencida",
+                "La solicitud de " + request.getCategory().getName()
+                        + " se canceló automáticamente porque terminó su tiempo de publicación.",
+                NotificationType.SERVICE_STATUS_CHANGED, requestData(request));
+    }
+
     private void counterpart(ServiceRequest request, User actor, String title, String message,
                              NotificationType type) {
         User recipient = request.getClient().getId().equals(actor.getId())

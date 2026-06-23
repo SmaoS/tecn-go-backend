@@ -11,9 +11,12 @@ import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.User;
 import com.tecngo.verification.service.EmailVerificationService;
+import com.tecngo.system_parameters.service.SystemParameterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +28,7 @@ public class ServiceRequestCommandService {
     private final ServiceRequestAccessPolicy access;
     private final ServiceRequestNotifier notifier;
     private final ServiceRequestAssembler assembler;
+    private final SystemParameterService parameters;
 
     @Transactional
     public ServiceRequestResponse create(CreateServiceRequest request, User client) {
@@ -48,6 +52,8 @@ public class ServiceRequestCommandService {
                 .longitude(request.longitude())
                 .estimatedPrice(request.estimatedPrice())
                 .requestedPaymentMethod(request.paymentMethod() == null ? PaymentMethod.CASH : request.paymentMethod())
+                .expiresAt(Instant.now().plus(
+                        parameters.serviceRequestExpirationHours(), ChronoUnit.HOURS))
                 .build());
         notifier.nearbyTechnicians(saved);
         return assembler.response(saved);

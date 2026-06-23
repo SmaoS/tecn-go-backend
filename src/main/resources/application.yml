@@ -109,6 +109,8 @@ app:
       verify-service-sid: ${TWILIO_VERIFY_SERVICE_SID:}
   parameters:
     quote-expiration-minutes: ${QUOTE_EXPIRATION_MINUTES:10}
+    service-request-expiration-hours: ${SERVICE_REQUEST_EXPIRATION_HOURS:24}
+    service-request-expiration-polling-ms: ${SERVICE_REQUEST_EXPIRATION_POLLING_MS:60000}
     platform-commission-percentage: ${PLATFORM_COMMISSION_PERCENTAGE:0}
     technician-offline-after-minutes: ${TECHNICIAN_OFFLINE_AFTER_MINUTES:3}
     location-polling-seconds: ${LOCATION_POLLING_SECONDS:10}

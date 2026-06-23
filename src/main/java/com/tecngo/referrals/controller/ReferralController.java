@@ -23,4 +23,17 @@ public class ReferralController {
     @GetMapping("/v1/technicians/me/referral-rewards")
     @PreAuthorize("hasRole('TECHNICIAN')")
     public List<ReferralRewardResponse> rewards(@AuthenticationPrincipal User user) { return service.myRewards(user); }
+    @GetMapping("/v1/users/me/referral-code")
+    @PreAuthorize("hasAnyRole('CLIENT','TECHNICIAN')")
+    public ReferralCodeResponse userCode(@AuthenticationPrincipal User user) { return service.mine(user); }
+    @GetMapping("/v1/users/me/referrals")
+    @PreAuthorize("hasAnyRole('CLIENT','TECHNICIAN')")
+    public List<ReferralRegistrationResponse> userReferrals(@AuthenticationPrincipal User user) {
+        return service.myReferrals(user);
+    }
+    @GetMapping("/v1/users/me/referral-rewards")
+    @PreAuthorize("hasAnyRole('CLIENT','TECHNICIAN')")
+    public List<ReferralRewardResponse> userRewards(@AuthenticationPrincipal User user) {
+        return service.myRewards(user);
+    }
 }
