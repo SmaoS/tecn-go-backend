@@ -25,7 +25,7 @@ public class GeographicCatalogService {
     @Transactional(readOnly = true)
     public List<CatalogItemResponse> countries() {
         return countries.findByActiveTrueOrderByNameAsc().stream()
-                .map(item -> new CatalogItemResponse(item.getId(), item.getName()))
+                .map(item -> new CatalogItemResponse(item.getId(), item.getName(), item.getMobileDialCode()))
                 .toList();
     }
 

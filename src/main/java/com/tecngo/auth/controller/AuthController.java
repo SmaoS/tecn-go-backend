@@ -50,12 +50,12 @@ public class AuthController {
     @PostMapping("/phone/send-otp")
     public SendPhoneOtpResponse sendPhoneOtp(@Valid @RequestBody SendPhoneOtpRequest request,
                                              HttpServletRequest servletRequest) {
-        return phoneOtps.send(request.phone(), clientIp(servletRequest));
+        return phoneOtps.send(request.phone(), request.countryId(), clientIp(servletRequest));
     }
 
     @PostMapping("/phone/verify-otp")
     public VerifyPhoneOtpResponse verifyPhoneOtp(@Valid @RequestBody VerifyPhoneOtpRequest request) {
-        return phoneOtps.verify(request.phone(), request.code());
+        return phoneOtps.verify(request.phone(), request.countryId(), request.code());
     }
 
     @PostMapping("/register-by-phone")

@@ -75,6 +75,7 @@ class PhoneOtpAuthenticationIntegrationTest {
         assertThat(users.findByPhoneNormalized(normalized)).isPresent()
                 .get().satisfies(user -> {
                     assertThat(user.getEmail()).isNull();
+                    assertThat(user.getPhone()).isEqualTo(phone);
                     assertThat(user.isPhoneVerified()).isTrue();
                 });
 
@@ -89,7 +90,8 @@ class PhoneOtpAuthenticationIntegrationTest {
 
     @Test
     void rejectsExpiredOtpAndPersistsFailedAttempts() throws Exception {
-        String phone = "+57301" + String.valueOf(System.nanoTime()).substring(5, 11);
+        String phone = "301" + String.valueOf(System.nanoTime()).substring(5, 12);
+        String normalized = "+57" + phone;
         mvc.perform(post("/v1/auth/phone/send-otp")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(java.util.Map.of("phone", phone))))
@@ -102,7 +104,7 @@ class PhoneOtpAuthenticationIntegrationTest {
                 .andExpect(status().isConflict());
 
         PhoneOtpVerification latest = verifications
-                .findFirstByPhoneAndVerifiedFalseOrderByCreatedAtDesc(phone).orElseThrow();
+                .findFirstByPhoneAndVerifiedFalseOrderByCreatedAtDesc(normalized).orElseThrow();
         assertThat(latest.getAttempts()).isEqualTo(1);
 
         latest.setExpiresAt(Instant.now().minusSeconds(1));

@@ -3,13 +3,14 @@ package com.tecngo.users.dto;
 import com.tecngo.users.entity.DocumentType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.util.UUID;
 
 public record OnboardingMainDataRequest(
         @NotBlank String fullName,
-        @Size(max = 30) String phone,
+        @Pattern(regexp = "^$|\\d{10}", message = "El celular debe tener exactamente 10 dígitos") String phone,
         @NotNull UUID countryId,
         @NotNull UUID departmentId,
         @NotNull UUID cityId,

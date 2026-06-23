@@ -30,7 +30,7 @@ class GeographicCatalogServiceTest {
     void listsActiveCatalogsByParent() {
         UUID countryId = UUID.randomUUID();
         UUID departmentId = UUID.randomUUID();
-        Country country = Country.builder().id(countryId).name("Colombia").active(true).build();
+        Country country = Country.builder().id(countryId).name("Colombia").mobileDialCode("+57").active(true).build();
         Department department = Department.builder().id(departmentId).country(country)
                 .name("Meta").active(true).build();
         City city = City.builder().id(UUID.randomUUID()).department(department)
@@ -42,6 +42,7 @@ class GeographicCatalogServiceTest {
         when(cities.findByDepartmentIdAndActiveTrueOrderByNameAsc(departmentId)).thenReturn(List.of(city));
 
         assertThat(service.countries()).extracting("name").containsExactly("Colombia");
+        assertThat(service.countries()).extracting("phonePrefix").containsExactly("+57");
         assertThat(service.departments(countryId)).extracting("name").containsExactly("Meta");
         assertThat(service.cities(departmentId)).extracting("name").containsExactly("Villavicencio");
     }

@@ -22,6 +22,9 @@ public class Country {
     @Column(nullable = false, unique = true, length = 120)
     private String name;
 
+    @Column(name = "indicativo_celular", length = 8)
+    private String mobileDialCode;
+
     @Column(nullable = false)
     private boolean active;
 }

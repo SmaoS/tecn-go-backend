@@ -76,7 +76,11 @@ public class UserService {
         user.setFullName(request.fullName().trim());
         String requestedPhone = clean(request.phone());
         if (requestedPhone != null) {
-            String normalizedPhone = phones.normalize(requestedPhone);
+            java.util.UUID countryId = request.countryId() != null
+                    ? request.countryId()
+                    : user.getCountry() == null ? null : user.getCountry().getId();
+            String localPhone = phones.local(requestedPhone);
+            String normalizedPhone = phones.international(localPhone, countryId);
             if (user.isPhoneVerified() && user.getPhoneNormalized() != null
                     && !user.getPhoneNormalized().equals(normalizedPhone)) {
                 throw new ConflictException("Verify the new phone before replacing the current one");
@@ -86,7 +90,7 @@ public class UserService {
                     .ifPresent(existing -> {
                         throw new ConflictException("Phone is already registered");
                     });
-            user.setPhone(normalizedPhone);
+            user.setPhone(localPhone);
             user.setPhoneNormalized(normalizedPhone);
         }
         user.setProfilePhotoUrl(newProfilePhoto);
@@ -115,14 +119,15 @@ public class UserService {
     public UserProfileResponse verifyPhone(User authenticatedUser, String rawPhone,
                                            String verificationToken) {
         User user = profileUser(authenticatedUser);
-        String phone = phoneOtps.consume(rawPhone, verificationToken);
-        users.findByPhoneNormalized(phone)
+        java.util.UUID countryId = user.getCountry() == null ? null : user.getCountry().getId();
+        var phone = phoneOtps.consume(rawPhone, countryId, verificationToken);
+        users.findByPhoneNormalized(phone.international())
                 .filter(existing -> !existing.getId().equals(user.getId()))
                 .ifPresent(existing -> {
                     throw new ConflictException("Phone is already registered");
                 });
-        user.setPhone(phone);
-        user.setPhoneNormalized(phone);
+        user.setPhone(phone.local());
+        user.setPhoneNormalized(phone.international());
         user.setPhoneVerified(true);
         return map(users.save(user));
     }

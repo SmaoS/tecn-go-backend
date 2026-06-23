@@ -46,16 +46,17 @@ public class OnboardingService {
     public OnboardingStatusResponse mainData(User user, OnboardingMainDataRequest request) {
         requireContact(user);
         user.setFullName(request.fullName().trim());
+        var selection = geographicCatalogs.requireSelection(request.countryId(), request.departmentId(), request.cityId());
         if (!blank(request.phone())) {
-            String normalizedPhone = phones.normalize(request.phone());
+            String localPhone = phones.local(request.phone());
+            String normalizedPhone = phones.international(localPhone, selection.country().getId());
             if (user.isPhoneVerified() && user.getPhoneNormalized() != null
                     && !user.getPhoneNormalized().equals(normalizedPhone)) {
                 throw new ConflictException("Verify the new phone before replacing the current one");
             }
-            user.setPhone(normalizedPhone);
+            user.setPhone(localPhone);
             user.setPhoneNormalized(normalizedPhone);
         }
-        var selection = geographicCatalogs.requireSelection(request.countryId(), request.departmentId(), request.cityId());
         user.setCountry(selection.country());
         user.setDepartment(selection.department());
         user.setCity(selection.city());

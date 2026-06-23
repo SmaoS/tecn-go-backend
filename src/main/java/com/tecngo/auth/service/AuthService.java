@@ -109,15 +109,16 @@ public class AuthService {
         if (request.role() == Role.ADMIN || request.role() == Role.VERIFIER) {
             throw new IllegalArgumentException("This role cannot be registered publicly");
         }
-        String phone = phones.normalize(request.phone());
-        if (users.existsByPhoneNormalized(phone)) {
+        String localPhone = phones.local(request.phone());
+        String normalizedPhone = phones.international(request.phone(), request.countryId());
+        if (users.existsByPhoneNormalized(normalizedPhone)) {
             throw new ConflictException("Phone is already registered");
         }
-        phoneOtps.consume(phone, request.verificationToken());
+        phoneOtps.consume(localPhone, request.countryId(), request.verificationToken());
         User user = users.save(User.builder()
                 .fullName(request.fullName().trim())
-                .phone(phone)
-                .phoneNormalized(phone)
+                .phone(localPhone)
+                .phoneNormalized(normalizedPhone)
                 .phoneVerified(true)
                 .password(passwordEncoder.encode(request.password()))
                 .role(request.role())
@@ -136,7 +137,7 @@ public class AuthService {
     }
 
     public AuthResponse loginByPhone(LoginByPhoneRequest request, String clientIp, String userAgent) {
-        String phone = phones.normalize(request.phone());
+        String phone = phones.international(request.phone(), request.countryId());
         rateLimits.check("LOGIN_PHONE", phone, 10, Duration.ofMinutes(15));
         rateLimits.check("LOGIN_IP", clientIp, 30, Duration.ofMinutes(15));
         User user = users.findByPhoneNormalized(phone).orElse(null);

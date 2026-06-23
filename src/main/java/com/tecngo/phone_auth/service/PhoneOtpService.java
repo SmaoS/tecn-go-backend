@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +33,8 @@ public class PhoneOtpService {
     private final SecureRandom random = new SecureRandom();
 
     @Transactional
-    public SendPhoneOtpResponse send(String rawPhone, String requestIp) {
-        String phone = phones.normalize(rawPhone);
+    public SendPhoneOtpResponse send(String rawPhone, UUID countryId, String requestIp) {
+        String phone = phones.international(rawPhone, countryId);
         String ipHash = hash(requestIp == null ? "unknown" : requestIp);
         Instant window = Instant.now().minus(10, ChronoUnit.MINUTES);
         if (verifications.countByPhoneAndCreatedAtAfter(phone, window) >= parameters.otpMaxSendsPerPhone()
@@ -60,8 +61,8 @@ public class PhoneOtpService {
     }
 
     @Transactional(noRollbackFor = ConflictException.class)
-    public VerifyPhoneOtpResponse verify(String rawPhone, String code) {
-        String phone = phones.normalize(rawPhone);
+    public VerifyPhoneOtpResponse verify(String rawPhone, UUID countryId, String code) {
+        String phone = phones.international(rawPhone, countryId);
         PhoneOtpVerification verification = verifications
                 .findFirstByPhoneAndVerifiedFalseOrderByCreatedAtDesc(phone)
                 .orElseThrow(() -> new ConflictException("Verification code is invalid or expired"));
@@ -84,7 +85,7 @@ public class PhoneOtpService {
         verification.setExpiresAt(Instant.now().plus(parameters.otpExpirationMinutes(), ChronoUnit.MINUTES));
         verification.setVerificationTokenHash(hash(rawToken));
         users.findByPhoneNormalized(phone).ifPresent(user -> {
-            user.setPhone(phone);
+            user.setPhone(phones.local(rawPhone));
             user.setPhoneNormalized(phone);
             user.setPhoneVerified(true);
             users.save(user);
@@ -93,8 +94,9 @@ public class PhoneOtpService {
     }
 
     @Transactional
-    public String consume(String rawPhone, String rawToken) {
-        String phone = phones.normalize(rawPhone);
+    public VerifiedPhone consume(String rawPhone, UUID countryId, String rawToken) {
+        String localPhone = phones.local(rawPhone);
+        String phone = phones.international(rawPhone, countryId);
         PhoneOtpVerification verification = verifications
                 .findByPhoneAndVerificationTokenHashAndVerifiedTrueAndConsumedAtIsNull(phone, hash(rawToken))
                 .orElseThrow(() -> new ConflictException("Phone verification is required"));
@@ -102,8 +104,10 @@ public class PhoneOtpService {
             throw new ConflictException("Phone verification expired");
         }
         verification.setConsumedAt(Instant.now());
-        return phone;
+        return new VerifiedPhone(localPhone, phone);
     }
+
+    public record VerifiedPhone(String local, String international) {}
 
     private String token() {
         byte[] bytes = new byte[32];

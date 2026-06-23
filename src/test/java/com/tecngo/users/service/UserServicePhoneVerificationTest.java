@@ -51,13 +51,14 @@ class UserServicePhoneVerificationTest {
                 .averageRating(new BigDecimal("5.00"))
                 .build();
         when(users.findProfileById(userId)).thenReturn(Optional.of(user));
-        when(phoneOtps.consume("3001234567", "verified-token")).thenReturn("+573001234567");
+        when(phoneOtps.consume("3001234567", null, "verified-token"))
+                .thenReturn(new PhoneOtpService.VerifiedPhone("3001234567", "+573001234567"));
         when(users.findByPhoneNormalized("+573001234567")).thenReturn(Optional.empty());
         when(users.save(user)).thenReturn(user);
 
         var response = service.verifyPhone(user, "3001234567", "verified-token");
 
-        assertThat(response.phone()).isEqualTo("+573001234567");
+        assertThat(response.phone()).isEqualTo("3001234567");
         assertThat(response.phoneVerified()).isTrue();
         verify(users).save(user);
     }
@@ -69,7 +70,8 @@ class UserServicePhoneVerificationTest {
                 .averageRating(new BigDecimal("5.00")).build();
         User owner = User.builder().id(UUID.randomUUID()).build();
         when(users.findProfileById(userId)).thenReturn(Optional.of(user));
-        when(phoneOtps.consume("3001234567", "verified-token")).thenReturn("+573001234567");
+        when(phoneOtps.consume("3001234567", null, "verified-token"))
+                .thenReturn(new PhoneOtpService.VerifiedPhone("3001234567", "+573001234567"));
         when(users.findByPhoneNormalized("+573001234567")).thenReturn(Optional.of(owner));
 
         assertThatThrownBy(() -> service.verifyPhone(user, "3001234567", "verified-token"))

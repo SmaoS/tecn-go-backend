@@ -3,6 +3,7 @@ package com.tecngo.technicians.service;
 import com.tecngo.catalogs.service.GeographicCatalogService;
 import com.tecngo.content_moderation.entity.ContentAssetKind;
 import com.tecngo.content_moderation.service.ManagedContentPolicy;
+import com.tecngo.phone_auth.service.PhoneNormalizer;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.shared.exception.CodedForbiddenException;
 import com.tecngo.shared.exception.NotFoundException;
@@ -42,6 +43,7 @@ public class TechnicianProfileService {
     private final ManagedContentPolicy managedContent;
     private final GeographicCatalogService geographicCatalogs;
     private final TechnicianWalletService wallets;
+    private final PhoneNormalizer phones;
 
     @Transactional
     public TechnicianProfileResponse create(TechnicianProfileRequest request, User user) {
@@ -50,10 +52,11 @@ public class TechnicianProfileService {
             throw new ConflictException("Document number is already registered");
         }
         updateUserEvidence(user, request);
+        String localPhone = updateUserPhone(user, request);
         TechnicianProfile saved = profiles.save(TechnicianProfile.builder()
                 .user(user)
                 .documentNumber(request.documentNumber().trim())
-                .phone(request.phone().trim())
+                .phone(localPhone)
                 .categories(categories(request.categoryIds()))
                 .description(request.description().trim())
                 .latitude(request.latitude())
@@ -72,12 +75,12 @@ public class TechnicianProfileService {
     @Transactional
     public TechnicianProfileResponse update(TechnicianProfileRequest request, User user) {
         TechnicianProfile profile = findByUser(user);
-        profile.setPhone(request.phone().trim());
         profile.setCategories(categories(request.categoryIds()));
         profile.setDescription(request.description().trim());
         profile.setLatitude(request.latitude());
         profile.setLongitude(request.longitude());
         updateUserEvidence(user, request);
+        profile.setPhone(updateUserPhone(user, request));
         if (!profile.getDocumentNumber().equals(request.documentNumber())) {
             if (profiles.existsByDocumentNumber(request.documentNumber())) {
                 throw new ConflictException("Document number is already registered");
@@ -218,6 +221,27 @@ public class TechnicianProfileService {
         }
         userService.markPendingWhenEvidenceChanges(user, previousDocument, user.getDocumentPhotoUrl());
         users.save(user);
+    }
+
+    private String updateUserPhone(User user, TechnicianProfileRequest request) {
+        UUID countryId = request.countryId() != null
+                ? request.countryId()
+                : user.getCountry() == null ? null : user.getCountry().getId();
+        String localPhone = phones.local(request.phone());
+        String normalizedPhone = phones.international(localPhone, countryId);
+        users.findByPhoneNormalized(normalizedPhone)
+                .filter(existing -> !existing.getId().equals(user.getId()))
+                .ifPresent(existing -> {
+                    throw new ConflictException("Phone is already registered");
+                });
+        if (user.isPhoneVerified() && user.getPhoneNormalized() != null
+                && !user.getPhoneNormalized().equals(normalizedPhone)) {
+            throw new ConflictException("Verify the new phone before replacing the current one");
+        }
+        user.setPhone(localPhone);
+        user.setPhoneNormalized(normalizedPhone);
+        users.save(user);
+        return localPhone;
     }
 
     private String clean(String value) {
