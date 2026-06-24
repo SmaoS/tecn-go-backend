@@ -192,7 +192,7 @@ public class ServiceRequestQueryService {
                                 Comparator.nullsLast(Double::compareTo))
                         .thenComparing(ServiceRequest::getCreatedAt, Comparator.reverseOrder()))
                 .toList();
-        return assembler.responses(sorted, distances, true);
+        return assembler.responses(sorted, distances, true, technician);
     }
 
     @Transactional(readOnly = true)

@@ -5,10 +5,12 @@ import com.tecngo.geolocation.LocationPrecision;
 import com.tecngo.service_requests.dto.ServiceQuoteResponse;
 import com.tecngo.service_requests.dto.ServiceRequestImageResponse;
 import com.tecngo.service_requests.dto.ServiceRequestResponse;
+import com.tecngo.service_requests.entity.QuoteStatus;
 import com.tecngo.service_requests.entity.ServiceQuote;
 import com.tecngo.service_requests.entity.ServiceRequest;
 import com.tecngo.service_requests.entity.ServiceRequestImage;
 import com.tecngo.service_requests.repository.ServiceRequestImageRepository;
+import com.tecngo.service_requests.repository.ServiceQuoteRepository;
 import com.tecngo.technicians.repository.TechnicianProfileRepository;
 import com.tecngo.users.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ import java.util.stream.Collectors;
 public class ServiceRequestAssembler {
     private final ServiceRequestImageRepository images;
     private final TechnicianProfileRepository technicianProfiles;
+    private final ServiceQuoteRepository quotes;
 
     public ServiceRequestResponse response(ServiceRequest item) {
         return response(item, null, false);
@@ -46,6 +49,13 @@ public class ServiceRequestAssembler {
     public List<ServiceRequestResponse> responses(List<ServiceRequest> items,
                                                   Map<UUID, Double> distances,
                                                   boolean approximateLocation) {
+        return responses(items, distances, approximateLocation, null);
+    }
+
+    public List<ServiceRequestResponse> responses(List<ServiceRequest> items,
+                                                  Map<UUID, Double> distances,
+                                                  boolean approximateLocation,
+                                                  User viewer) {
         if (items.isEmpty()) return List.of();
         Map<UUID, List<ServiceRequestImage>> imageMap =
                 loadImages(items.stream().map(ServiceRequest::getId).toList());
@@ -55,11 +65,13 @@ public class ServiceRequestAssembler {
                 .map(User::getId)
                 .distinct()
                 .toList());
+        List<UUID> pendingQuoteRequestIds = loadPendingQuoteRequestIds(items, viewer);
         return items.stream().map(item -> {
             UUID technicianId = item.getTechnician() == null ? null : item.getTechnician().getId();
             return response(item, distances.get(item.getId()), approximateLocation,
                     imageMap.getOrDefault(item.getId(), List.of()),
-                    technicianId == null ? List.of() : categoryMap.getOrDefault(technicianId, List.of()));
+                    technicianId == null ? List.of() : categoryMap.getOrDefault(technicianId, List.of()),
+                    pendingQuoteRequestIds.contains(item.getId()));
         }).toList();
     }
 
@@ -92,6 +104,18 @@ public class ServiceRequestAssembler {
             List<ServiceRequestImage> serviceImages,
             List<String> technicianCategories
     ) {
+        return response(item, distanceKm, approximateLocation, serviceImages,
+                technicianCategories, false);
+    }
+
+    private ServiceRequestResponse response(
+            ServiceRequest item,
+            Double distanceKm,
+            boolean approximateLocation,
+            List<ServiceRequestImage> serviceImages,
+            List<String> technicianCategories,
+            boolean myPendingQuote
+    ) {
         User technician = item.getTechnician();
         return new ServiceRequestResponse(item.getId(), item.getClient().getId(), item.getClient().getFullName(),
                 technician == null ? null : technician.getId(), technician == null ? null : technician.getFullName(),
@@ -121,7 +145,8 @@ public class ServiceRequestAssembler {
                                 : image.getContentAsset().getModerationStatus(),
                         image.getCreatedAt())).toList(),
                 item.getCity() == null ? null : item.getCity().getId(),
-                item.getCity() == null ? null : item.getCity().getName());
+                item.getCity() == null ? null : item.getCity().getName(),
+                myPendingQuote);
     }
 
     private ServiceQuoteResponse quote(ServiceQuote quote, List<String> technicianCategories) {
@@ -153,6 +178,16 @@ public class ServiceRequestAssembler {
                                 .map(category -> category.getName())
                                 .sorted()
                                 .toList()));
+    }
+
+    private List<UUID> loadPendingQuoteRequestIds(List<ServiceRequest> requests, User viewer) {
+        if (viewer == null || requests.isEmpty()) return List.of();
+        List<UUID> requestIds = requests.stream().map(ServiceRequest::getId).toList();
+        return quotes.findByServiceRequestIdInAndTechnicianIdAndStatus(
+                        requestIds, viewer.getId(), QuoteStatus.PENDING).stream()
+                .map(quote -> quote.getServiceRequest().getId())
+                .distinct()
+                .toList();
     }
 
     private String approximate(String address) {

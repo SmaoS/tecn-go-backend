@@ -22,5 +22,5 @@ public record ServiceRequestResponse(
         BigDecimal technicianPrice, BigDecimal finalPrice, PaymentMethod requestedPaymentMethod,
         RequestStatus status, Instant createdAt,
         long serviceImagesCount, String firstServiceImageUrl, List<ServiceRequestImageResponse> images,
-        UUID cityId, String cityName
+        UUID cityId, String cityName, boolean myPendingQuote
 ) {}

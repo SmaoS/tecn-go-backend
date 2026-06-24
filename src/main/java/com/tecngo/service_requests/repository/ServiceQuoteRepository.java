@@ -16,6 +16,8 @@ import java.util.UUID;
 public interface ServiceQuoteRepository extends JpaRepository<ServiceQuote, UUID> {
     Optional<ServiceQuote> findFirstByServiceRequestIdAndTechnicianIdAndStatus(
             UUID serviceRequestId, UUID technicianId, QuoteStatus status);
+    List<ServiceQuote> findByServiceRequestIdInAndTechnicianIdAndStatus(
+            List<UUID> serviceRequestIds, UUID technicianId, QuoteStatus status);
     @EntityGraph(attributePaths = {"technician", "serviceRequest"})
     List<ServiceQuote> findByServiceRequestIdOrderByCreatedAtAsc(UUID serviceRequestId);
     List<ServiceQuote> findByServiceRequestIdAndStatus(UUID serviceRequestId, QuoteStatus status);
