@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tecngo.phone_auth.entity.PhoneOtpVerification;
 import com.tecngo.phone_auth.repository.PhoneOtpVerificationRepository;
+import com.tecngo.users.entity.Role;
+import com.tecngo.users.entity.User;
+import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -113,5 +117,33 @@ class PhoneOtpAuthenticationIntegrationTest {
                         .content(objectMapper.writeValueAsString(java.util.Map.of(
                                 "phone", phone, "code", "00000"))))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void rejectsSendingOtpToPhoneAlreadyRegisteredByAnotherUser() throws Exception {
+        String phone = "302" + String.valueOf(System.nanoTime()).substring(5, 12);
+        String normalized = "+57" + phone;
+        users.save(User.builder()
+                .fullName("Usuario existente")
+                .email("phone-" + System.nanoTime() + "@tecngo.test")
+                .password("encoded")
+                .role(Role.CLIENT)
+                .verificationStatus(VerificationStatus.CREATED)
+                .phone(phone)
+                .phoneNormalized(normalized)
+                .phoneVerified(true)
+                .createdAt(Instant.now())
+                .averageRating(new BigDecimal("5.00"))
+                .build());
+        long before = verifications.countByPhoneAndCreatedAtAfter(
+                normalized, Instant.now().minusSeconds(60));
+
+        mvc.perform(post("/v1/auth/phone/send-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("phone", phone))))
+                .andExpect(status().isConflict());
+
+        assertThat(verifications.countByPhoneAndCreatedAtAfter(
+                normalized, Instant.now().minusSeconds(60))).isEqualTo(before);
     }
 }

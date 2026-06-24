@@ -49,8 +49,9 @@ public class AuthController {
 
     @PostMapping("/phone/send-otp")
     public SendPhoneOtpResponse sendPhoneOtp(@Valid @RequestBody SendPhoneOtpRequest request,
+                                             @AuthenticationPrincipal User user,
                                              HttpServletRequest servletRequest) {
-        return phoneOtps.send(request.phone(), request.countryId(), clientIp(servletRequest));
+        return phoneOtps.send(request.phone(), request.countryId(), clientIp(servletRequest), user);
     }
 
     @PostMapping("/phone/verify-otp")

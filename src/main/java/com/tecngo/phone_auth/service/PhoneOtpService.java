@@ -8,6 +8,7 @@ import com.tecngo.phone_auth.repository.PhoneOtpVerificationRepository;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.shared.exception.TooManyRequestsException;
 import com.tecngo.system_parameters.service.SystemParameterService;
+import com.tecngo.users.entity.User;
 import com.tecngo.users.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,7 +35,17 @@ public class PhoneOtpService {
 
     @Transactional
     public SendPhoneOtpResponse send(String rawPhone, UUID countryId, String requestIp) {
+        return send(rawPhone, countryId, requestIp, null);
+    }
+
+    @Transactional
+    public SendPhoneOtpResponse send(String rawPhone, UUID countryId, String requestIp, User requester) {
         String phone = phones.international(rawPhone, countryId);
+        users.findByPhoneNormalized(phone).ifPresent(owner -> {
+            if (requester == null || !owner.getId().equals(requester.getId())) {
+                throw new ConflictException("Phone is already registered");
+            }
+        });
         String ipHash = hash(requestIp == null ? "unknown" : requestIp);
         Instant window = Instant.now().minus(10, ChronoUnit.MINUTES);
         if (verifications.countByPhoneAndCreatedAtAfter(phone, window) >= parameters.otpMaxSendsPerPhone()
