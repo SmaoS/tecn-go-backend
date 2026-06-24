@@ -38,7 +38,6 @@ public class AuthService {
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
     private final EmailVerificationService emailVerificationService;
     private final ApplicationEventPublisher events;
     private final ReferralService referrals;

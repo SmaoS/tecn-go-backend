@@ -1,6 +1,5 @@
 package com.tecngo.payment_proofs.service;
 
-import com.tecngo.files.service.FileStorage;
 import com.tecngo.content_moderation.entity.*;
 import com.tecngo.content_moderation.service.ModeratedFileService;
 import com.tecngo.payment_proofs.dto.*;
@@ -30,7 +29,6 @@ public class PaymentProofService {
     private final PaymentProofRepository proofs;
     private final ServiceRequestRepository requests;
     private final PaymentRepository payments;
-    private final FileStorage storage;
     private final SystemParameterService parameters;
     private final ApplicationEventPublisher events;
     private final ModeratedFileService moderatedFiles;
