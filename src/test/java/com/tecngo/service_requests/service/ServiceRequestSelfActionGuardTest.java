@@ -60,7 +60,7 @@ class ServiceRequestSelfActionGuardTest {
     @BeforeEach
     void setUp() {
         ServiceRequestAccessPolicy access = new ServiceRequestAccessPolicy(userAccess, legal);
-        ServiceRequestAssembler assembler = new ServiceRequestAssembler(images, technicianProfileRepository);
+        ServiceRequestAssembler assembler = new ServiceRequestAssembler(images, technicianProfileRepository, quotes);
         ServiceRequestNotifier notifier = new ServiceRequestNotifier(events, technicianProfileRepository, distance);
         service = new ServiceQuoteService(
                 requests, quotes, technicianProfiles, emailVerification, parameters, wallets,

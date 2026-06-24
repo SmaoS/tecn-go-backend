@@ -40,7 +40,7 @@ class ServiceRequestHistoryFilterTest {
     @BeforeEach
     void setUp() {
         ServiceRequestAccessPolicy access = new ServiceRequestAccessPolicy(userAccess, legal);
-        ServiceRequestAssembler assembler = new ServiceRequestAssembler(images, technicianProfileRepository);
+        ServiceRequestAssembler assembler = new ServiceRequestAssembler(images, technicianProfileRepository, quotes);
         service = new ServiceRequestQueryService(
                 requests, technicianProfiles, distance, emailVerification, parameters, technicianLocations,
                 userAccess, geographicCatalogs, access, assembler);
