@@ -29,6 +29,12 @@ public class ComplianceAdminController {
         return data.requests(status);
     }
 
+    @GetMapping("/data-export-requests")
+    @PreAuthorize("hasAnyRole('ADMIN','VERIFIER')")
+    public List<DataRequestResponse> dataExportRequests(@RequestParam(required = false) DataRequestStatus status) {
+        return data.exportRequests(status);
+    }
+
     @PutMapping("/data-requests/{id}/approve-anonymization")
     @PreAuthorize("hasRole('ADMIN')")
     public DataRequestResponse approve(@PathVariable UUID id, @AuthenticationPrincipal User admin,
@@ -42,6 +48,22 @@ public class ComplianceAdminController {
                                       @Valid @RequestBody AnonymizationRequest request,
                                       @AuthenticationPrincipal User admin) {
         return data.reject(id, request.reason(), admin);
+    }
+
+    @PutMapping("/data-export-requests/{id}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN','VERIFIER')")
+    public DataRequestResponse approveExport(@PathVariable UUID id,
+                                             @AuthenticationPrincipal User reviewer,
+                                             HttpServletRequest request) {
+        return data.approveExport(id, reviewer, correlation(request));
+    }
+
+    @PutMapping("/data-export-requests/{id}/reject")
+    @PreAuthorize("hasAnyRole('ADMIN','VERIFIER')")
+    public DataRequestResponse rejectExport(@PathVariable UUID id,
+                                            @Valid @RequestBody AnonymizationRequest request,
+                                            @AuthenticationPrincipal User reviewer) {
+        return data.reject(id, request.reason(), reviewer);
     }
 
     @GetMapping("/retention-policies")

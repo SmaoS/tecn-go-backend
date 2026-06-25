@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -26,8 +27,9 @@ class ComplianceFlowIntegrationTest {
         String body = mvc.perform(post("/v1/users/me/data-export")
                         .header("Authorization", bearer(session)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.requestId").isNotEmpty())
-                .andExpect(jsonPath("$.data.profile.fullName").value("Cliente cumplimiento"))
+                .andExpect(jsonPath("$.id").isNotEmpty())
+                .andExpect(jsonPath("$.type").value("EXPORT"))
+                .andExpect(jsonPath("$.status").value("PENDING"))
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(body)
@@ -35,6 +37,10 @@ class ComplianceFlowIntegrationTest {
                 .doesNotContainIgnoringCase("fcm_token")
                 .doesNotContainIgnoringCase("secure_url")
                 .doesNotContainIgnoringCase("public_id");
+
+        mvc.perform(post("/v1/users/me/data-export-request")
+                        .header("Authorization", bearer(session)))
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -55,6 +61,30 @@ class ComplianceFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"reason\":\"Solicitud duplicada\"}"))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void adminCanApproveDataExportAndSendFile() throws Exception {
+        JsonNode session = registerClient("approved-export");
+        String requestBody = mvc.perform(post("/v1/users/me/data-export-request")
+                        .header("Authorization", bearer(session)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andReturn().getResponse().getContentAsString();
+        String requestId = mapper.readTree(requestBody).get("id").asText();
+        JsonNode admin = login("admin@tecngo.local", "Admin123!");
+
+        mvc.perform(put("/v1/admin/data-export-requests/{id}/approve", requestId)
+                        .header("Authorization", bearer(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SENT"))
+                .andExpect(jsonPath("$.exportFileUrl").isNotEmpty())
+                .andExpect(jsonPath("$.sentAt").isNotEmpty());
+
+        mvc.perform(get("/v1/users/me/data-export-requests")
+                        .header("Authorization", bearer(session)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("SENT"));
     }
 
     @Test

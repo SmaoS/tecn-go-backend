@@ -25,6 +25,12 @@ public class ComplianceDataRequest {
     @Column(nullable = false)
     private Instant requestedAt;
     private Instant completedAt;
+    private Instant reviewedAt;
+    @Column(length = 1000)
+    private String rejectionReason;
+    @Column(length = 1000)
+    private String exportFileUrl;
+    private Instant sentAt;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by_user_id")
     private User reviewedBy;

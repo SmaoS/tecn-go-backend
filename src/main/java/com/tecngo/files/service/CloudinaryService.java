@@ -46,7 +46,7 @@ public class CloudinaryService implements FileStorage {
         }
         if (file.getSize() > maxBytes) throw new IllegalArgumentException("File exceeds the configured maximum size");
         try {
-            String resourceType = contentType.equals("application/pdf") ? "raw" : "image";
+            String resourceType = contentType.startsWith("image/") ? "image" : "raw";
             Map<?, ?> result = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
                     "folder", folder,
                     "resource_type", resourceType,
@@ -76,7 +76,8 @@ public class CloudinaryService implements FileStorage {
     @Override
     public void delete(String publicId, String contentType) {
         try {
-            String resourceType = "application/pdf".equalsIgnoreCase(contentType) ? "raw" : "image";
+            String resourceType = contentType != null && contentType.toLowerCase(Locale.ROOT).startsWith("image/")
+                    ? "image" : "raw";
             cloudinary.uploader().destroy(publicId, ObjectUtils.asMap(
                     "resource_type", resourceType,
                     "type", "authenticated"

@@ -39,6 +39,8 @@ public class UserOperationGuard {
                 || path.equals("/v1/users/me/profile")
                 || path.equals("/v1/users/me/phone-verification")
                 || path.equals("/v1/users/me/data-export")
+                || path.equals("/v1/users/me/data-export-request")
+                || path.equals("/v1/users/me/data-export-requests")
                 || path.equals("/v1/users/me/data-anonymization")
                 || path.equals("/v1/users/me/onboarding-status")
                 || path.startsWith("/v1/legal/")

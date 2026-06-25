@@ -8,6 +8,8 @@ import java.util.UUID;
 
 public interface ComplianceDataRequestRepository extends JpaRepository<ComplianceDataRequest, UUID> {
     List<ComplianceDataRequest> findByStatusOrderByRequestedAtAsc(DataRequestStatus status);
+    List<ComplianceDataRequest> findByRequestTypeAndStatusOrderByRequestedAtAsc(
+            DataRequestType type, DataRequestStatus status);
     List<ComplianceDataRequest> findByUserIdOrderByRequestedAtDesc(UUID userId);
     boolean existsByUserIdAndRequestTypeAndStatus(UUID userId, DataRequestType type, DataRequestStatus status);
 }

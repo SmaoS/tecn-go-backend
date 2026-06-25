@@ -56,6 +56,16 @@ public class ResendEmailSender implements EmailSender {
                 "Administrative MFA", "MFA code: " + code);
     }
 
+    @Override
+    public void sendDataExport(String recipient, String recipientName, String exportUrl) {
+        send(recipient, "Exportación de datos TecnGo",
+                "<p>Hola " + escape(recipientName) + ",</p>"
+                        + "<p>Adjuntamos o compartimos el enlace seguro con la información solicitada de tu cuenta TecnGo.</p>"
+                        + "<p><a href=\"" + exportUrl + "\">Descargar exportación</a></p>"
+                        + "<p>Si no solicitaste esta exportación, comunícate con soporte.</p>",
+                "Data export", exportUrl);
+    }
+
     private void send(String recipient, String subject, String html, String operation, String fallbackUrl) {
         if (apiKey == null || apiKey.isBlank()) {
             log.info("{} for {}: {}", operation, recipient, fallbackUrl);

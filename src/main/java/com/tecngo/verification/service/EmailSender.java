@@ -6,4 +6,6 @@ public interface EmailSender {
     void sendPasswordReset(String recipient, String recipientName, String resetUrl);
 
     void sendMfaCode(String recipient, String recipientName, String code, long expirationMinutes);
+
+    void sendDataExport(String recipient, String recipientName, String exportUrl);
 }

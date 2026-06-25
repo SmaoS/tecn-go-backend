@@ -8,5 +8,6 @@ import java.util.UUID;
 
 public record DataRequestResponse(
         UUID id, UUID userId, String userName, DataRequestType type, DataRequestStatus status,
-        String reason, Instant requestedAt, Instant completedAt, UUID reviewedByUserId
+        String reason, Instant requestedAt, Instant completedAt, Instant reviewedAt,
+        String rejectionReason, String exportFileUrl, Instant sentAt, UUID reviewedByUserId
 ) {}

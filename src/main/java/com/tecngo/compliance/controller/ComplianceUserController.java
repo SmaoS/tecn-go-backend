@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/v1/users/me")
 @RequiredArgsConstructor
@@ -17,8 +19,18 @@ public class ComplianceUserController {
     private final ComplianceDataService service;
 
     @PostMapping("/data-export")
-    public DataExportResponse export(@AuthenticationPrincipal User user, HttpServletRequest request) {
-        return service.export(user, correlation(request));
+    public DataRequestResponse export(@AuthenticationPrincipal User user, HttpServletRequest request) {
+        return service.requestExport(user, correlation(request));
+    }
+
+    @PostMapping("/data-export-request")
+    public DataRequestResponse exportRequest(@AuthenticationPrincipal User user, HttpServletRequest request) {
+        return service.requestExport(user, correlation(request));
+    }
+
+    @GetMapping("/data-export-requests")
+    public List<DataRequestResponse> exportRequests(@AuthenticationPrincipal User user) {
+        return service.exportRequests(user);
     }
 
     @PostMapping("/data-anonymization")

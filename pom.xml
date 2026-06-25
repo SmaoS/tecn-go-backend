@@ -11,7 +11,7 @@
     </parent>
     <groupId>com.tecngo</groupId>
     <artifactId>tecngo-backend</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.3</version>
     <name>TecnGo Backend</name>
     <description>Modular monolith API for the TecnGo marketplace</description>
     <properties>
