@@ -130,7 +130,7 @@ public class TechnicianProfileService {
         TechnicianProfile profile = findByUser(user);
         requireOperationalProfile(user, profile);
         if (profile.getStatus() != TechnicianStatus.APPROVED) {
-            throw new IllegalStateException("Technician profile must be approved");
+            throw new IllegalStateException("Tu perfil está en revisión… ¡muy pronto estará activo!");
         }
         if (user.getVerificationStatus() != VerificationStatus.VERIFIED) {
             throw new IllegalStateException("Technician identity must be verified");

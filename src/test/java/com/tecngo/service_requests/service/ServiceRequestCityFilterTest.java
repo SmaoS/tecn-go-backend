@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class ServiceRequestCityFilterTest {
@@ -151,6 +152,34 @@ class ServiceRequestCityFilterTest {
         var result = service.available(technician, null, null, null, 10.0);
 
         assertThat(result).extracting("id").containsExactly(request.getId());
+    }
+
+    @Test
+    void availablePageDoesNotCalculateDistanceWhenTechnicianLocationIsMissingAndRadiusIsDisabled() {
+        City city = City.builder().id(UUID.randomUUID()).name("Villavicencio").build();
+        ServiceCategory category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").build();
+        User technician = User.builder().id(UUID.randomUUID()).role(Role.TECHNICIAN).city(city).build();
+        TechnicianProfile profile = TechnicianProfile.builder().user(technician)
+                .categories(Set.of(category)).build();
+        User client = User.builder().id(UUID.randomUUID()).fullName("Cliente")
+                .averageRating(new BigDecimal("5.00")).build();
+        ServiceRequest request = request(category, city, client, 4.11, -73.61);
+        when(technicianProfiles.approvedProfile(technician)).thenReturn(profile);
+        when(technicianLocations.findByTechnicianId(technician.getId())).thenReturn(java.util.Optional.empty());
+        when(requests.findAvailable(org.mockito.ArgumentMatchers.eq(RequestStatus.QUOTE_PENDING),
+                org.mockito.ArgumentMatchers.eq(city.getId()),
+                org.mockito.ArgumentMatchers.eq(List.of(category.getId())),
+                org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(List.of(request));
+        when(images.findByServiceRequestIdInOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.anyList()))
+                .thenReturn(List.of());
+
+        var result = service.availablePage(technician, null, null, false, null, 0, 10);
+
+        assertThat(result.getContent()).extracting("id").containsExactly(request.getId());
+        assertThat(result.getContent().getFirst().distanceKm()).isNull();
+        verify(distance, never()).kilometers(anyDouble(), anyDouble(), anyDouble(), anyDouble());
     }
 
     private ServiceRequest request(ServiceCategory category, City city, User client,

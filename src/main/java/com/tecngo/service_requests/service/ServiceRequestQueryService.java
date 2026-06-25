@@ -167,11 +167,17 @@ public class ServiceRequestQueryService {
                 : requestedRadiusKm != null || parameters.serviceSearchUseRadius();
         Double radiusKm = resolveRadius(requestedRadiusKm, useRadius);
         var liveLocation = technicianLocations.findByTechnicianId(technician.getId()).orElse(null);
-        Double originLatitude = liveLocation != null && liveLocation.isOnline()
-                ? liveLocation.getLatitude() : profile.getLatitude();
-        Double originLongitude = liveLocation != null && liveLocation.isOnline()
-                ? liveLocation.getLongitude() : profile.getLongitude();
-        if (useRadius && (originLatitude == null || originLongitude == null)) {
+        Double originLatitude;
+        Double originLongitude;
+        if (liveLocation != null && liveLocation.isOnline()) {
+            originLatitude = liveLocation.getLatitude();
+            originLongitude = liveLocation.getLongitude();
+        } else {
+            originLatitude = profile.getLatitude();
+            originLongitude = profile.getLongitude();
+        }
+        boolean hasOriginLocation = originLatitude != null && originLongitude != null;
+        if (useRadius && !hasOriginLocation) {
             throw new ConflictException("Technician GPS location is required");
         }
         var candidates = PageRequest.of(0,
@@ -181,7 +187,9 @@ public class ServiceRequestQueryService {
                         RequestStatus.QUOTE_PENDING, categoryIds, requestedCategoryId, candidates)
                 : requests.findAvailable(RequestStatus.QUOTE_PENDING, searchCity.getId(),
                         categoryIds, requestedCategoryId, candidates);
-        Map<UUID, Double> distances = distances(availableRequests, originLatitude, originLongitude);
+        Map<UUID, Double> distances = hasOriginLocation
+                ? distances(availableRequests, originLatitude, originLongitude)
+                : Map.of();
         Double activeRadiusKm = radiusKm;
         List<ServiceRequest> sorted = availableRequests.stream()
                 .filter(item -> !item.getClient().getId().equals(technician.getId()))
