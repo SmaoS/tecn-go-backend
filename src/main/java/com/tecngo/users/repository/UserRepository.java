@@ -46,10 +46,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
               and (:createdFrom is null or u.createdAt >= :createdFrom)
               and (:createdTo is null or u.createdAt <= :createdTo)
               and (
-                    :search is null
-                    or lower(u.fullName) like lower(concat('%', :search, '%'))
-                    or lower(coalesce(u.email, '')) like lower(concat('%', :search, '%'))
-                    or coalesce(u.phone, '') like concat('%', :search, '%')
+                    :searchPattern is null
+                    or lower(u.fullName) like :searchPattern
+                    or lower(coalesce(u.email, '')) like :searchPattern
+                    or coalesce(u.phone, '') like :searchPattern
                   )
             """, countQuery = """
             select count(distinct u) from User u
@@ -59,16 +59,16 @@ public interface UserRepository extends JpaRepository<User, UUID> {
               and (:createdFrom is null or u.createdAt >= :createdFrom)
               and (:createdTo is null or u.createdAt <= :createdTo)
               and (
-                    :search is null
-                    or lower(u.fullName) like lower(concat('%', :search, '%'))
-                    or lower(coalesce(u.email, '')) like lower(concat('%', :search, '%'))
-                    or coalesce(u.phone, '') like concat('%', :search, '%')
+                    :searchPattern is null
+                    or lower(u.fullName) like :searchPattern
+                    or lower(coalesce(u.email, '')) like :searchPattern
+                    or coalesce(u.phone, '') like :searchPattern
                   )
             """)
     Page<User> searchAdminUsers(@Param("role") Role role,
                                 @Param("status") AccountStatus status,
                                 @Param("createdFrom") Instant createdFrom,
                                 @Param("createdTo") Instant createdTo,
-                                @Param("search") String search,
+                                @Param("searchPattern") String searchPattern,
                                 Pageable pageable);
 }

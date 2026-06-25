@@ -25,8 +25,10 @@ public class AdminUserSearchService {
                                                 Instant createdTo,
                                                 String search,
                                                 Pageable pageable) {
-        String cleanSearch = search == null || search.isBlank() ? null : search.trim();
-        return users.searchAdminUsers(role, status, createdFrom, createdTo, cleanSearch, pageable)
+        String searchPattern = search == null || search.isBlank()
+                ? null
+                : "%" + search.trim().toLowerCase() + "%";
+        return users.searchAdminUsers(role, status, createdFrom, createdTo, searchPattern, pageable)
                 .map(this::map);
     }
 
