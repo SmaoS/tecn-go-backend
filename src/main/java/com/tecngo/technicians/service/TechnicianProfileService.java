@@ -48,14 +48,15 @@ public class TechnicianProfileService {
     @Transactional
     public TechnicianProfileResponse create(TechnicianProfileRequest request, User user) {
         if (profiles.existsByUserId(user.getId())) throw new ConflictException("Technician profile already exists");
-        if (profiles.existsByDocumentNumber(request.documentNumber())) {
+        String documentNumber = resolveDocumentNumber(request, user);
+        if (profiles.existsByDocumentNumber(documentNumber)) {
             throw new ConflictException("Document number is already registered");
         }
         updateUserEvidence(user, request);
         String localPhone = updateUserPhone(user, request);
         TechnicianProfile saved = profiles.save(TechnicianProfile.builder()
                 .user(user)
-                .documentNumber(request.documentNumber().trim())
+                .documentNumber(documentNumber)
                 .phone(localPhone)
                 .categories(categories(request.categoryIds()))
                 .description(request.description().trim())
@@ -81,11 +82,12 @@ public class TechnicianProfileService {
         profile.setLongitude(request.longitude());
         updateUserEvidence(user, request);
         profile.setPhone(updateUserPhone(user, request));
-        if (!profile.getDocumentNumber().equals(request.documentNumber())) {
-            if (profiles.existsByDocumentNumber(request.documentNumber())) {
+        String documentNumber = resolveDocumentNumber(request, user);
+        if (!profile.getDocumentNumber().equals(documentNumber)) {
+            if (profiles.existsByDocumentNumber(documentNumber)) {
                 throw new ConflictException("Document number is already registered");
             }
-            profile.setDocumentNumber(request.documentNumber().trim());
+            profile.setDocumentNumber(documentNumber);
         }
         if (profile.getStatus() == TechnicianStatus.REJECTED) profile.setStatus(TechnicianStatus.PENDING);
         return map(profile);
@@ -200,8 +202,10 @@ public class TechnicianProfileService {
         String previousDocument = user.getDocumentPhotoUrl();
         user.setProfilePhotoUrl(managedContent.validateChange(user.getProfilePhotoUrl(),
                 request.profilePhotoUrl(), user, Set.of(ContentAssetKind.PROFILE)));
+        String requestedDocument = clean(request.documentPhotoUrl());
         user.setDocumentPhotoUrl(managedContent.validateChange(previousDocument,
-                request.documentPhotoUrl(), user, Set.of(ContentAssetKind.DOCUMENT)));
+                requestedDocument == null ? previousDocument : requestedDocument,
+                user, Set.of(ContentAssetKind.DOCUMENT)));
         user.setCertificatePhotoUrl(managedContent.validateChange(user.getCertificatePhotoUrl(),
                 request.certificatePhotoUrl(), user, Set.of(ContentAssetKind.CERTIFICATE)));
         user.setWorkExperienceDescription(request.workExperienceDescription().trim());
@@ -246,5 +250,13 @@ public class TechnicianProfileService {
 
     private String clean(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private String resolveDocumentNumber(TechnicianProfileRequest request, User user) {
+        String requested = clean(request.documentNumber());
+        if (requested != null) return requested;
+        String existing = clean(user.getDocumentNumber());
+        if (existing != null) return existing;
+        throw new IllegalArgumentException("Document number is required");
     }
 }

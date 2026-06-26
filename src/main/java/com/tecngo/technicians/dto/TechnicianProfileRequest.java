@@ -10,12 +10,12 @@ import java.util.Set;
 import java.util.UUID;
 
 public record TechnicianProfileRequest(
-        @NotBlank String documentNumber,
+        @Size(max = 50) String documentNumber,
         @NotBlank @Pattern(regexp = "\\d{10}", message = "El celular debe tener exactamente 10 dígitos") String phone,
         @NotEmpty Set<UUID> categoryIds,
         @NotBlank @Size(max = 1000) String description,
         String profilePhotoUrl,
-        @NotBlank String documentPhotoUrl,
+        String documentPhotoUrl,
         String certificatePhotoUrl,
         @NotBlank @Size(max = 1000) String workExperienceDescription,
         @NotNull Double latitude,
