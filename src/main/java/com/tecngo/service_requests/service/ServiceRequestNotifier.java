@@ -39,9 +39,8 @@ public class ServiceRequestNotifier {
                 .filter(profile -> distance.kilometers(profile.getLatitude(), profile.getLongitude(),
                         request.getLatitude(), request.getLongitude()) <= newRequestRadiusKm)
                 .forEach(profile -> publish(profile.getUser(),
-                        "Nueva solicitud cercana disponible",
-                        request.getCategory().getName() + " a menos de "
-                                + Math.round(newRequestRadiusKm) + " km",
+                        "Nuevo servicio disponible",
+                        "Se necesita "+request.getCategory().getName(),
                         NotificationType.NEW_REQUEST,
                         Map.of("type", "SERVICE_REQUEST",
                                 "requestId", request.getId().toString(),
