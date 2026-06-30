@@ -121,11 +121,13 @@ public class ServiceRequestAssembler {
                 technician == null ? null : technician.getId(), technician == null ? null : technician.getFullName(),
                 item.getClient().getProfilePhotoUrl(), item.getClient().getAverageRating(),
                 item.getClient().getPaidServicesCount(),
+                item.getClient().isDocumentsVerified(),
                 technician == null ? null : technician.getProfilePhotoUrl(),
                 technician == null ? null : technician.getAverageRating(),
                 technician == null ? 0 : technician.getCompletedServicesCount(),
                 technician == null ? null : technician.getWorkExperienceDescription(),
                 technicianCategories,
+                technician != null && technician.isDocumentsVerified(),
                 technician != null && technician.isDocumentsVerified()
                         && !blank(technician.getCertificatePhotoUrl()),
                 item.getCategory().getId(), item.getCategory().getName(), item.getDescription(),
@@ -156,6 +158,7 @@ public class ServiceRequestAssembler {
                 technician.getFullName(), technician.getProfilePhotoUrl(),
                 technician.getAverageRating(), technician.getCompletedServicesCount(),
                 technician.getWorkExperienceDescription(), technicianCategories,
+                technician.isDocumentsVerified(),
                 technician.isDocumentsVerified() && !blank(technician.getCertificatePhotoUrl()),
                 quote.getPrice(), quote.getDescription(), quote.getStatus(), quote.getCreatedAt(),
                 quote.getUpdatedAt(), quote.getExpiresAt(), quote.getRespondedAt());

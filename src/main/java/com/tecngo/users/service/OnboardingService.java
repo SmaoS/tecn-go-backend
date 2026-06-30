@@ -34,9 +34,13 @@ public class OnboardingService {
     private final ServiceCategoryService serviceCategories;
     private final PhoneNormalizer phones;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public OnboardingStatusResponse status(User user) {
         OnboardingStep current = currentStep(user);
+        if (current == OnboardingStep.COMPLETED && !user.isOnboardingCompleted()) {
+            markCompleted(user);
+            users.save(user);
+        }
         return new OnboardingStatusResponse(user.isEmailVerified(), user.isPhoneVerified(),
                 user.isOnboardingCompleted(),
                 current, requiredSteps(user), user.isOnboardingCompleted() ? "HOME" : null);
@@ -92,7 +96,11 @@ public class OnboardingService {
                 ? FaceDetectionStatus.MANUAL_REVIEW_REQUIRED : request.faceDetectionStatus();
         user.setFaceDetectionStatus(detectionStatus);
         user.setProfilePhotoFaceValidated(detectionStatus == FaceDetectionStatus.AUTO_VALIDATED);
-        user.setOnboardingStep(OnboardingStep.IDENTITY_DOCUMENT);
+        if (isTechnicianMode(user)) {
+            user.setOnboardingStep(OnboardingStep.IDENTITY_DOCUMENT);
+        } else {
+            markCompleted(user);
+        }
         users.save(user);
         return status(user);
     }
@@ -228,11 +236,11 @@ public class OnboardingService {
                 || user.getDocumentType() == null || blank(user.getDocumentNumber())) return OnboardingStep.MAIN_DATA;
         if (!legal.status(user).complete()) return OnboardingStep.LEGAL_ACCEPTANCE;
         if (blank(user.getProfilePhotoUrl())) return OnboardingStep.PROFILE_SELFIE;
-        if (user.getDocumentType() == DocumentType.CC
+        if (isTechnicianMode(user) && user.getDocumentType() == DocumentType.CC
                 && (blank(user.getDocumentFrontUrl()) || blank(user.getDocumentBackUrl()))) {
             return OnboardingStep.IDENTITY_DOCUMENT;
         }
-        if (user.getDocumentType() == DocumentType.PASSPORT && blank(user.getDocumentSingleUrl())) {
+        if (isTechnicianMode(user) && user.getDocumentType() == DocumentType.PASSPORT && blank(user.getDocumentSingleUrl())) {
             return OnboardingStep.IDENTITY_DOCUMENT;
         }
         if (isTechnicianMode(user) && !hasProfessionalProfile(user)) {
@@ -246,8 +254,9 @@ public class OnboardingService {
 
     private List<OnboardingStep> requiredSteps(User user) {
         List<OnboardingStep> steps = new ArrayList<>(List.of(OnboardingStep.MAIN_DATA,
-                OnboardingStep.LEGAL_ACCEPTANCE, OnboardingStep.PROFILE_SELFIE, OnboardingStep.IDENTITY_DOCUMENT));
+                OnboardingStep.LEGAL_ACCEPTANCE, OnboardingStep.PROFILE_SELFIE));
         if (isTechnicianMode(user)) {
+            steps.add(OnboardingStep.IDENTITY_DOCUMENT);
             steps.add(OnboardingStep.TECHNICIAN_PROFESSIONAL_PROFILE);
             steps.add(OnboardingStep.TECHNICIAN_CERTIFICATE);
         }

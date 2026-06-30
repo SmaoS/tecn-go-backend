@@ -12,9 +12,11 @@ import java.util.List;
 public record ServiceRequestResponse(
         UUID id, UUID clientId, String clientName, UUID technicianId, String technicianName,
         String clientProfilePhotoUrl, BigDecimal clientAverageRating, long clientPaidServicesCount,
+        boolean clientDocumentsVerified,
         String technicianProfilePhotoUrl, BigDecimal technicianAverageRating,
         long technicianCompletedServicesCount, String technicianExperienceDescription,
         List<String> technicianCategories,
+        boolean technicianDocumentsVerified,
         boolean certifiedTechnician,
         UUID categoryId, String categoryName, String description, String address,
         Double latitude, Double longitude, LocationPrecision locationPrecision,

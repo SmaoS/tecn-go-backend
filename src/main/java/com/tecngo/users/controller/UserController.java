@@ -7,9 +7,12 @@ import com.tecngo.users.dto.UserProfileRequest;
 import com.tecngo.users.dto.UserProfileResponse;
 import com.tecngo.users.dto.ActiveModeResponse;
 import com.tecngo.users.dto.ChangeActiveModeRequest;
+import com.tecngo.users.dto.ProfileSelfieChangeRequestCreate;
+import com.tecngo.users.dto.ProfileSelfieChangeRequestResponse;
 import com.tecngo.users.dto.VerifyUserPhoneRequest;
 import com.tecngo.users.entity.User;
 import com.tecngo.users.service.ActiveModeService;
+import com.tecngo.users.service.ProfileSelfieChangeRequestService;
 import com.tecngo.users.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +28,7 @@ import com.tecngo.auth.security.JwtAuthenticationFilter;
 public class UserController {
     private final UserService service;
     private final ActiveModeService activeModes;
+    private final ProfileSelfieChangeRequestService profileSelfieChanges;
 
     @PutMapping("/me/fcm-token")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -63,5 +67,18 @@ public class UserController {
         Object value = servletRequest.getAttribute(JwtAuthenticationFilter.SESSION_ID_ATTRIBUTE);
         return activeModes.change(user, request.mode(),
                 value instanceof java.util.UUID id ? id : null);
+    }
+
+    @PostMapping("/me/profile-selfie-change-requests")
+    public ProfileSelfieChangeRequestResponse requestProfileSelfieChange(
+            @Valid @RequestBody ProfileSelfieChangeRequestCreate request,
+            @AuthenticationPrincipal User user) {
+        return profileSelfieChanges.create(user, request);
+    }
+
+    @GetMapping("/me/profile-selfie-change-requests")
+    public java.util.List<ProfileSelfieChangeRequestResponse> profileSelfieChangeRequests(
+            @AuthenticationPrincipal User user) {
+        return profileSelfieChanges.mine(user);
     }
 }
