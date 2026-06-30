@@ -37,6 +37,12 @@ public class UserController {
         service.updateFcmToken(user, request.token());
     }
 
+    @DeleteMapping("/me/fcm-token")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void clearFcmToken(@AuthenticationPrincipal User user) {
+        service.clearFcmToken(user);
+    }
+
     @GetMapping("/me/profile")
     public UserProfileResponse profile(@AuthenticationPrincipal User user) {
         return service.profile(user);

@@ -18,6 +18,7 @@ import com.tecngo.auth.session.AuthSessionService;
 import com.tecngo.auth.security.JwtAuthenticationFilter;
 import com.tecngo.auth.ratelimit.SecurityRateLimitService;
 import com.tecngo.users.entity.User;
+import com.tecngo.users.service.UserService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import java.time.Duration;
 
@@ -30,6 +31,7 @@ public class AuthController {
     private final PhoneOtpService phoneOtps;
     private final AuthSessionService sessions;
     private final SecurityRateLimitService rateLimits;
+    private final UserService userService;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -82,12 +84,14 @@ public class AuthController {
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout(@AuthenticationPrincipal User user, HttpServletRequest request) {
+        userService.clearFcmToken(user);
         sessions.revoke(sessionId(request), user, "USER_LOGOUT");
     }
 
     @PostMapping("/logout-all")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logoutAll(@AuthenticationPrincipal User user) {
+        userService.clearFcmToken(user);
         sessions.revokeAll(user.getId(), "USER_LOGOUT_ALL");
     }
 

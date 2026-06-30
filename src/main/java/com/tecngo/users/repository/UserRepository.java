@@ -6,6 +6,7 @@ import com.tecngo.users.entity.Role;
 import com.tecngo.users.entity.VerificationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -18,6 +19,9 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
     Optional<User> findByEmailIgnoreCase(String email);
     Optional<User> findByPhoneNormalized(String phoneNormalized);
     boolean existsByPhoneNormalized(String phoneNormalized);
+    @Modifying
+    @Query("update User u set u.fcmToken = null, u.fcmTokenUpdatedAt = CURRENT_TIMESTAMP where u.fcmToken = :token and u.id <> :userId")
+    int clearFcmTokenFromOtherUsers(@Param("token") String token, @Param("userId") UUID userId);
     @Query("""
             select u from User u
             left join fetch u.country

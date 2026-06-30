@@ -43,7 +43,18 @@ public class UserService {
 
     @Transactional
     public void updateFcmToken(User user, String token) {
-        user.setFcmToken(token.trim());
+        String cleanToken = token.trim();
+        users.clearFcmTokenFromOtherUsers(cleanToken, user.getId());
+        user.setFcmToken(cleanToken);
+        user.setFcmTokenUpdatedAt(Instant.now());
+        users.save(user);
+    }
+
+    @Transactional
+    public void clearFcmToken(User authenticatedUser) {
+        User user = users.findById(authenticatedUser.getId())
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        user.setFcmToken(null);
         user.setFcmTokenUpdatedAt(Instant.now());
         users.save(user);
     }
