@@ -66,6 +66,17 @@ public class ResendEmailSender implements EmailSender {
                 "Data export", exportUrl);
     }
 
+    @Override
+    public void sendTechnicianProfileApproved(String recipient, String recipientName) {
+        send(recipient, "Tu perfil técnico fue aprobado en TecnGo",
+                "<p>Hola " + escape(recipientName) + ",</p>"
+                        + "<p>Tu perfil técnico fue aprobado.</p>"
+                        + "<p>Ya estás habilitado para recibir servicios en TecnGo.</p>"
+                        + "<p>Entra a la app, activa tu disponibilidad y revisa las solicitudes cercanas.</p>",
+                "Technician profile approval",
+                "Technician profile approved");
+    }
+
     private void send(String recipient, String subject, String html, String operation, String fallbackUrl) {
         if (apiKey == null || apiKey.isBlank()) {
             log.info("{} for {}: {}", operation, recipient, fallbackUrl);

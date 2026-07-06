@@ -8,4 +8,6 @@ public interface EmailSender {
     void sendMfaCode(String recipient, String recipientName, String code, long expirationMinutes);
 
     void sendDataExport(String recipient, String recipientName, String exportUrl);
+
+    void sendTechnicianProfileApproved(String recipient, String recipientName);
 }

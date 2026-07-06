@@ -3,6 +3,8 @@ package com.tecngo.technicians.service;
 import com.tecngo.catalogs.service.GeographicCatalogService;
 import com.tecngo.content_moderation.entity.ContentAssetKind;
 import com.tecngo.content_moderation.service.ManagedContentPolicy;
+import com.tecngo.notifications.entity.NotificationType;
+import com.tecngo.notifications.event.UserNotificationEvent;
 import com.tecngo.phone_auth.service.PhoneNormalizer;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.shared.exception.CodedForbiddenException;
@@ -19,10 +21,13 @@ import com.tecngo.users.entity.User;
 import com.tecngo.users.entity.VerificationStatus;
 import com.tecngo.users.repository.UserRepository;
 import com.tecngo.users.service.UserService;
+import com.tecngo.verification.service.EmailSender;
 import com.tecngo.verification.service.EmailVerificationService;
 import com.tecngo.referrals.service.ReferralService;
 import com.tecngo.technician_wallet.service.TechnicianWalletService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +38,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TechnicianProfileService {
     private final TechnicianProfileRepository profiles;
     private final ServiceCategoryService categoryService;
@@ -44,6 +50,8 @@ public class TechnicianProfileService {
     private final GeographicCatalogService geographicCatalogs;
     private final TechnicianWalletService wallets;
     private final PhoneNormalizer phones;
+    private final ApplicationEventPublisher events;
+    private final EmailSender emails;
 
     @Transactional
     public TechnicianProfileResponse create(TechnicianProfileRequest request, User user) {
@@ -115,6 +123,7 @@ public class TechnicianProfileService {
     public TechnicianProfileResponse review(UUID id, TechnicianStatus status) {
         TechnicianProfile profile = profiles.findById(id)
                 .orElseThrow(() -> new NotFoundException("Technician profile not found"));
+        TechnicianStatus previousStatus = profile.getStatus();
         if (status == TechnicianStatus.APPROVED
                 && profile.getUser().getVerificationStatus() != VerificationStatus.VERIFIED) {
             throw new IllegalStateException("User identity must be verified first");
@@ -123,8 +132,26 @@ public class TechnicianProfileService {
         if (status == TechnicianStatus.APPROVED) {
             referrals.ensureCode(profile.getUser());
             wallets.ensureWallet(profile.getUser());
+            if (previousStatus != TechnicianStatus.APPROVED) {
+                notifyTechnicianApproved(profile.getUser());
+            }
         }
         return map(profile);
+    }
+
+    private void notifyTechnicianApproved(User user) {
+        events.publishEvent(new UserNotificationEvent(user.getId(),
+                "Perfil técnico aprobado",
+                "Tu perfil técnico fue aprobado. Ya estás habilitado para recibir servicios.",
+                NotificationType.TECHNICIAN_PROFILE_APPROVED));
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            return;
+        }
+        try {
+            emails.sendTechnicianProfileApproved(user.getEmail(), user.getFullName());
+        } catch (RuntimeException exception) {
+            log.error("Technician approval email could not be sent to {}", user.getEmail(), exception);
+        }
     }
 
     @Transactional(readOnly = true)
