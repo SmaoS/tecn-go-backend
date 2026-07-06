@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.sql.Timestamp;
 import java.util.*;
 
 @Service
@@ -55,21 +56,22 @@ public class RetentionService {
     }
 
     private int purge(String category, Instant cutoff) {
+        Timestamp cutoffTimestamp = Timestamp.from(cutoff);
         return switch (category) {
             case "ACCESS_AUDIT" ->
-                    jdbc.update("delete from compliance_access_audits where created_at < ?", cutoff);
+                    jdbc.update("delete from compliance_access_audits where created_at < ?", cutoffTimestamp);
             case "NOTIFICATIONS" ->
-                    jdbc.update("delete from notifications where is_read = true and created_at < ?", cutoff);
+                    jdbc.update("delete from notifications where is_read = true and created_at < ?", cutoffTimestamp);
             case "AUTHENTICATION_METADATA" -> {
-                int deleted = jdbc.update("delete from auth_sessions where expires_at < ?", cutoff);
+                int deleted = jdbc.update("delete from auth_sessions where expires_at < ?", cutoffTimestamp);
                 deleted += jdbc.update("""
                         delete from verification_tokens
                          where expires_at < ? or used_at is not null
-                        """, cutoff);
+                        """, cutoffTimestamp);
                 deleted += jdbc.update("""
                         delete from password_reset_tokens
                          where expires_at < ? or used = true
-                        """, cutoff);
+                        """, cutoffTimestamp);
                 yield deleted;
             }
             default -> 0;
