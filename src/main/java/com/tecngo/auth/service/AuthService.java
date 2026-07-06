@@ -16,10 +16,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.context.ApplicationEventPublisher;
-import com.tecngo.notifications.event.UserNotificationEvent;
-import com.tecngo.notifications.entity.NotificationType;
-import java.util.Map;
 import com.tecngo.referrals.service.ReferralService;
 import com.tecngo.phone_auth.dto.LoginByPhoneRequest;
 import com.tecngo.phone_auth.dto.RegisterByPhoneRequest;
@@ -39,7 +35,6 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final EmailVerificationService emailVerificationService;
-    private final ApplicationEventPublisher events;
     private final ReferralService referrals;
     private final PhoneOtpService phoneOtps;
     private final PhoneNormalizer phones;
@@ -51,6 +46,9 @@ public class AuthService {
     public AuthResponse register(RegisterRequest request) {
         if (!request.password().equals(request.confirmPassword())) {
             throw new IllegalArgumentException("Las contraseñas no coinciden");
+        }
+        if (!request.email().trim().equalsIgnoreCase(request.confirmEmail().trim())) {
+            throw new IllegalArgumentException("Los correos no coinciden");
         }
         if (request.role() == Role.ADMIN || request.role() == Role.VERIFIER) {
             throw new IllegalArgumentException("This role cannot be registered publicly");
@@ -70,10 +68,6 @@ public class AuthService {
             log.error("Account {} was created, but the verification email could not be sent",
                     user.getEmail(), exception);
         }
-        events.publishEvent(new UserNotificationEvent(user.getId(), "Documentos legales pendientes",
-                "Lee y acepta los términos, políticas y recomendaciones para usar todas las funciones de TecnGo.",
-                NotificationType.LEGAL_ACCEPTANCE_REQUIRED,
-                Map.of("type", "LEGAL", "route", "Legal")));
         return response(user, null, null, false);
     }
 
@@ -124,10 +118,6 @@ public class AuthService {
                 .verificationStatus(VerificationStatus.CREATED)
                 .build());
         referrals.register(user, request.referralCode());
-        events.publishEvent(new UserNotificationEvent(user.getId(), "Documentos legales pendientes",
-                "Lee y acepta los términos, políticas y recomendaciones para usar todas las funciones de TecnGo.",
-                NotificationType.LEGAL_ACCEPTANCE_REQUIRED,
-                Map.of("type", "LEGAL", "route", "Legal")));
         return response(user, null, null, false);
     }
 
