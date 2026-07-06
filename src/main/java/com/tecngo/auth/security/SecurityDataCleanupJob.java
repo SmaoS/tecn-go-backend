@@ -18,7 +18,7 @@ public class SecurityDataCleanupJob {
     private final AdminMfaChallengeRepository challenges;
     private final AuthSessionRepository sessions;
 
-    @Scheduled(fixedDelay = 86_400_000)
+    @Scheduled(fixedDelayString = "${app.parameters.data-clean-up:86400000}")
     @Transactional
     public void cleanup() {
         Instant now = Instant.now();

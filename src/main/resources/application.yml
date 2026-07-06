@@ -139,6 +139,8 @@ app:
     service-search-use-radius: ${SERVICE_SEARCH_USE_RADIUS:false}
     service-search-default-radius-km: ${SERVICE_SEARCH_DEFAULT_RADIUS_KM:10}
     service-search-max-radius-km: ${SERVICE_SEARCH_MAX_RADIUS_KM:50}
+    data-clean-up: ${DATA_CLEAN_UP:86_400_000}
+    quote-experation-job: ${QUOTE_EXPERATION_JOB:86_400_000}
   wompi:
     public-key: ${WOMPI_PUBLIC_KEY:}
     private-key: ${WOMPI_PRIVATE_KEY:}

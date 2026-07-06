@@ -12,8 +12,8 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class QuoteExpirationJob {
     private final ServiceQuoteRepository quotes;
-
-    @Scheduled(fixedDelay = 60_000)
+    
+    @Scheduled(fixedDelayString = "${app.parameters.quote-experation-job:86400000}")
     @Transactional
     public void expireQuotes() {
         quotes.expirePending(Instant.now());
