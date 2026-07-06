@@ -141,7 +141,7 @@ public class TechnicianProfileService {
 
     private void notifyTechnicianApproved(User user) {
         events.publishEvent(new UserNotificationEvent(user.getId(),
-                "Perfil técnico aprobado",
+                "¡Bienvenido a la familia TecnGo!",
                 "Tu perfil técnico fue aprobado. Ya estás habilitado para recibir servicios.",
                 NotificationType.TECHNICIAN_PROFILE_APPROVED));
         if (user.getEmail() == null || user.getEmail().isBlank()) {

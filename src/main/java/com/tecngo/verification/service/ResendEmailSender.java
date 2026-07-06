@@ -68,11 +68,11 @@ public class ResendEmailSender implements EmailSender {
 
     @Override
     public void sendTechnicianProfileApproved(String recipient, String recipientName) {
-        send(recipient, "Tu perfil técnico fue aprobado en TecnGo",
+        send(recipient, "¡Bienvenido a la familia TecnGo!",
                 "<p>Hola " + escape(recipientName) + ",</p>"
                         + "<p>Tu perfil técnico fue aprobado.</p>"
                         + "<p>Ya estás habilitado para recibir servicios en TecnGo.</p>"
-                        + "<p>Entra a la app, activa tu disponibilidad y revisa las solicitudes cercanas.</p>",
+                        + "<p>Entra a la app y revisa las solicitudes cercanas.</p>",
                 "Technician profile approval",
                 "Technician profile approved");
     }
