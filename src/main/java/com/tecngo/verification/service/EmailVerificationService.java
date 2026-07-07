@@ -62,6 +62,28 @@ public class EmailVerificationService {
     }
 
     @Transactional
+    public User updateEmailAndSend(User user, String email, String confirmEmail) {
+        if (user.isEmailVerified()) {
+            throw new ConflictException("El correo ya está verificado");
+        }
+        String normalizedEmail = normalizeEmail(email);
+        String normalizedConfirmEmail = normalizeEmail(confirmEmail);
+        if (!normalizedEmail.equals(normalizedConfirmEmail)) {
+            throw new IllegalArgumentException("Los correos no coinciden");
+        }
+        users.findByEmailIgnoreCase(normalizedEmail)
+                .filter(existing -> !existing.getId().equals(user.getId()))
+                .ifPresent(existing -> {
+                    throw new ConflictException("Email is already registered");
+                });
+        user.setEmail(normalizedEmail);
+        user.setEmailVerified(false);
+        User saved = users.save(user);
+        send(saved);
+        return saved;
+    }
+
+    @Transactional
     public User verify(String rawToken) {
         VerificationToken token = tokens.findByTokenHash(hash(rawToken))
                 .orElseThrow(() -> new NotFoundException("Verification token not found"));
@@ -93,5 +115,12 @@ public class EmailVerificationService {
         } catch (Exception exception) {
             throw new IllegalStateException("Unable to hash verification token", exception);
         }
+    }
+
+    private String normalizeEmail(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        return value.trim().toLowerCase();
     }
 }
