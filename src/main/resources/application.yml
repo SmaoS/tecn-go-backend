@@ -87,12 +87,14 @@ app:
     available-request-candidate-limit: ${AVAILABLE_REQUEST_CANDIDATE_LIMIT:500}
   reliability:
     outbox:
-      polling-ms: ${OUTBOX_POLLING_MS:2000}
+      enabled: ${OUTBOX_ENABLED:true}
+      polling-ms: ${OUTBOX_POLLING_MS:300000}
       batch-size: ${OUTBOX_BATCH_SIZE:25}
       max-attempts: ${OUTBOX_MAX_ATTEMPTS:8}
       stale-seconds: ${OUTBOX_STALE_SECONDS:120}
     wompi-reconciliation:
-      polling-ms: ${WOMPI_RECONCILIATION_POLLING_MS:60000}
+      enabled: ${WOMPI_RECONCILIATION_ENABLED:true}
+      polling-ms: ${WOMPI_RECONCILIATION_POLLING_MS:900000}
       batch-size: ${WOMPI_RECONCILIATION_BATCH_SIZE:25}
   observability:
     metrics-scrape-token: ${METRICS_SCRAPE_TOKEN:}

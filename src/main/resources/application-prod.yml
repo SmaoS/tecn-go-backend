@@ -22,6 +22,13 @@ app:
     require-verification: ${REQUIRE_EMAIL_VERIFICATION:true}
   onboarding:
     require-completion: ${REQUIRE_ONBOARDING_COMPLETION:true}
+  reliability:
+    outbox:
+      enabled: ${OUTBOX_ENABLED:true}
+      polling-ms: ${OUTBOX_POLLING_MS:300000}
+    wompi-reconciliation:
+      enabled: ${WOMPI_RECONCILIATION_ENABLED:true}
+      polling-ms: ${WOMPI_RECONCILIATION_POLLING_MS:900000}
   sms:
     provider: ${SMS_PROVIDER:twilio}
     expose-debug-code: false
