@@ -13,8 +13,6 @@ import com.tecngo.users.entity.*;
 import com.tecngo.users.repository.UserRepository;
 import com.tecngo.verification.service.EmailSender;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,8 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -41,9 +37,6 @@ public class ComplianceDataService {
     private final JdbcTemplate jdbc;
     private final ComplianceAuditService audits;
     private final EmailSender emailSender;
-
-    @Value("${app.public-api-url:${APP_PUBLIC_API_URL:}}")
-    private String publicApiUrl;
 
     @Transactional
     public DataRequestResponse requestExport(User user, String correlationId) {
@@ -92,17 +85,13 @@ public class ComplianceDataService {
         request.setReviewedBy(reviewer);
         request.setReviewedAt(Instant.now());
 
-        FileStorage.StoredFile stored = storage.store(new BytesMultipartFile(
-                "file",
-                "tecngo-data-export-" + target.getId() + ".zip",
-                "application/zip",
-                buildExportZip(target)
-        ), false, "tecngo/data-exports", Set.of("application/zip", "text/plain", "text/csv"));
-        request.setExportFileUrl(stored.accessUrl());
+        String exportFileName = "tecngo-data-export-" + target.getId() + ".zip";
+        byte[] exportContent = buildExportZip(target);
+        request.setExportFileUrl(null);
         request.setStatus(DataRequestStatus.SENT);
         request.setSentAt(Instant.now());
         request.setCompletedAt(request.getSentAt());
-        emailSender.sendDataExport(target.getEmail(), target.getFullName(), absoluteUrl(stored.accessUrl()));
+        emailSender.sendDataExport(target.getEmail(), target.getFullName(), exportFileName, exportContent);
         audits.record(reviewer, target, "PERSONAL_DATA", target.getId().toString(),
                 "EXPORT_APPROVE_SEND", AuditOutcome.SUCCESS, correlationId, null,
                 "Personal data export generated and email sent");
@@ -377,22 +366,4 @@ public class ComplianceDataService {
         return trimmed.length() <= 1000 ? trimmed : trimmed.substring(0, 1000);
     }
 
-    private String absoluteUrl(String accessUrl) {
-        if (accessUrl == null || accessUrl.startsWith("http")) return accessUrl;
-        if (publicApiUrl == null || publicApiUrl.isBlank()) return accessUrl;
-        return publicApiUrl.replaceAll("/+$", "") + accessUrl;
-    }
-
-    private record BytesMultipartFile(String name, String originalFilename, String contentType, byte[] bytes)
-            implements MultipartFile {
-        @Override public String getName() { return name; }
-        @Override public String getOriginalFilename() { return originalFilename; }
-        @Override public String getContentType() { return contentType; }
-        @Override public boolean isEmpty() { return bytes.length == 0; }
-        @Override public long getSize() { return bytes.length; }
-        @Override public byte[] getBytes() { return bytes; }
-        @Override public InputStream getInputStream() { return new ByteArrayInputStream(bytes); }
-        @Override public void transferTo(File dest) throws IOException { Files.write(dest.toPath(), bytes); }
-        @Override public void transferTo(Path dest) throws IOException { Files.write(dest, bytes); }
-    }
 }

@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -57,13 +59,15 @@ public class ResendEmailSender implements EmailSender {
     }
 
     @Override
-    public void sendDataExport(String recipient, String recipientName, String exportUrl) {
+    public void sendDataExport(String recipient, String recipientName, String fileName, byte[] content) {
         send(recipient, "Exportación de datos TecnGo",
                 "<p>Hola " + escape(recipientName) + ",</p>"
-                        + "<p>Adjuntamos o compartimos el enlace seguro con la información solicitada de tu cuenta TecnGo.</p>"
-                        + "<p><a href=\"" + exportUrl + "\">Descargar exportación</a></p>"
+                        + "<p>Adjuntamos la información solicitada de tu cuenta TecnGo en formato ZIP.</p>"
                         + "<p>Si no solicitaste esta exportación, comunícate con soporte.</p>",
-                "Data export", exportUrl);
+                "Data export", "Attached file: " + fileName, List.of(Map.of(
+                        "filename", fileName,
+                        "content", Base64.getEncoder().encodeToString(content)
+                )));
     }
 
     @Override
@@ -78,23 +82,31 @@ public class ResendEmailSender implements EmailSender {
     }
 
     private void send(String recipient, String subject, String html, String operation, String fallbackUrl) {
+        send(recipient, subject, html, operation, fallbackUrl, List.of());
+    }
+
+    private void send(String recipient, String subject, String html, String operation, String fallbackUrl,
+                      List<Map<String, String>> attachments) {
         if (apiKey == null || apiKey.isBlank()) {
             log.info("{} for {}: {}", operation, recipient, fallbackUrl);
             return;
         }
         log.info("Sending {} email through Resend to {}", operation, recipient);
         try {
+            Map<String, Object> body = new java.util.LinkedHashMap<>();
+            body.put("from", from);
+            body.put("to", new String[]{recipient});
+            body.put("subject", subject);
+            body.put("html", html);
+            if (!attachments.isEmpty()) {
+                body.put("attachments", attachments);
+            }
             Map<?, ?> response = restClientBuilder.baseUrl("https://api.resend.com").build()
                     .post()
                     .uri("/emails")
                     .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of(
-                            "from", from,
-                            "to", new String[]{recipient},
-                            "subject", subject,
-                            "html", html
-                    ))
+                    .body(body)
                     .retrieve()
                     .body(Map.class);
             log.info("Resend accepted {} email for {} with id {}", operation, recipient,
