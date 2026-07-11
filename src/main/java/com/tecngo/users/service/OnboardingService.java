@@ -231,7 +231,7 @@ public class OnboardingService {
     }
 
     private OnboardingStep currentStep(User user) {
-        if (!user.isEmailVerified()) return OnboardingStep.MAIN_DATA;
+        if (!user.isEmailVerified() && !user.isPhoneVerified()) return OnboardingStep.MAIN_DATA;
         if (blank(user.getPhone()) || user.getCity() == null || blank(user.getHomeAddress())
                 || user.getDocumentType() == null || blank(user.getDocumentNumber())) return OnboardingStep.MAIN_DATA;
         if (!legal.status(user).complete()) return OnboardingStep.LEGAL_ACCEPTANCE;

@@ -1,10 +1,13 @@
 package com.tecngo.users.service;
 
 import com.tecngo.catalogs.entity.City;
+import com.tecngo.catalogs.entity.Country;
+import com.tecngo.catalogs.entity.Department;
 import com.tecngo.catalogs.service.GeographicCatalogService;
 import com.tecngo.content_moderation.service.ManagedContentPolicy;
 import com.tecngo.legal.dto.LegalStatusResponse;
 import com.tecngo.legal.service.LegalService;
+import com.tecngo.phone_auth.service.PhoneNormalizer;
 import com.tecngo.services.entity.ServiceCategory;
 import com.tecngo.services.service.ServiceCategoryService;
 import com.tecngo.shared.exception.ConflictException;
@@ -13,6 +16,7 @@ import com.tecngo.shared.exception.NotFoundException;
 import com.tecngo.technicians.entity.TechnicianProfile;
 import com.tecngo.technicians.repository.TechnicianProfileRepository;
 import com.tecngo.users.dto.CertificateRequest;
+import com.tecngo.users.dto.OnboardingMainDataRequest;
 import com.tecngo.users.dto.TechnicianProfessionalProfileRequest;
 import com.tecngo.users.entity.DocumentType;
 import com.tecngo.users.entity.ActiveMode;
@@ -43,7 +47,48 @@ class OnboardingServiceProfessionalProfileTest {
     @Mock LegalService legal;
     @Mock TechnicianProfileRepository technicianProfiles;
     @Mock ServiceCategoryService serviceCategories;
+    @Mock PhoneNormalizer phones;
     @InjectMocks OnboardingService service;
+
+    @Test
+    void phoneVerifiedUserCanAdvanceFromMainDataWithoutEmailVerification() {
+        User client = User.builder()
+                .id(UUID.randomUUID())
+                .role(Role.CLIENT)
+                .fullName("Cliente TecnGo")
+                .phone("3001234567")
+                .phoneVerified(true)
+                .build();
+        UUID countryId = UUID.randomUUID();
+        UUID departmentId = UUID.randomUUID();
+        UUID cityId = UUID.randomUUID();
+        Country country = Country.builder().id(countryId).code("CO").name("Colombia").mobileDialCode("+57").active(true).build();
+        Department department = Department.builder().id(departmentId).country(country).name("Meta").active(true).build();
+        City city = City.builder().id(cityId).department(department).name("Villavicencio").active(true).build();
+        when(geographicCatalogs.requireSelection(countryId, departmentId, cityId))
+                .thenReturn(new GeographicCatalogService.GeographicSelection(country, department, city));
+        when(phones.local("3001234567")).thenReturn("3001234567");
+        when(phones.international("3001234567", countryId)).thenReturn("+573001234567");
+        when(legal.status(client)).thenReturn(new LegalStatusResponse(false, List.of(), List.of(), false, false));
+
+        var result = service.mainData(client, new OnboardingMainDataRequest(
+                "Cliente TecnGo",
+                "3001234567",
+                countryId,
+                departmentId,
+                cityId,
+                "Calle 10 # 20-30",
+                "Centro",
+                DocumentType.CC,
+                "123456789"
+        ));
+
+        assertThat(result.emailVerified()).isFalse();
+        assertThat(result.phoneVerified()).isTrue();
+        assertThat(result.currentStep()).isEqualTo(OnboardingStep.LEGAL_ACCEPTANCE);
+        assertThat(client.getOnboardingStep()).isEqualTo(OnboardingStep.LEGAL_ACCEPTANCE);
+        verify(users).save(client);
+    }
 
     @Test
     void technicianWithCategoryAndExperienceAdvancesToCertificate() {
