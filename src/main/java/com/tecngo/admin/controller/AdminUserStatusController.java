@@ -2,7 +2,9 @@ package com.tecngo.admin.controller;
 
 import com.tecngo.users.dto.InactivateUserRequest;
 import com.tecngo.users.dto.InactiveUserResponse;
+import com.tecngo.admin.dto.AdminUserDeletionResponse;
 import com.tecngo.admin.dto.AdminUserSearchResponse;
+import com.tecngo.admin.service.AdminUserDeletionService;
 import com.tecngo.admin.service.AdminUserSearchService;
 import com.tecngo.users.entity.AccountStatus;
 import com.tecngo.users.entity.Role;
@@ -28,6 +30,7 @@ import java.util.UUID;
 public class AdminUserStatusController {
     private final UserAccessService service;
     private final AdminUserSearchService searchService;
+    private final AdminUserDeletionService deletionService;
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN','VERIFIER')")
@@ -65,5 +68,12 @@ public class AdminUserStatusController {
     @PreAuthorize("hasRole('ADMIN')")
     public InactiveUserResponse activate(@PathVariable UUID id, @AuthenticationPrincipal User admin) {
         return service.activate(id, admin);
+    }
+
+    @DeleteMapping("/{id}/initial-registration")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AdminUserDeletionResponse deleteInitialRegistration(@PathVariable UUID id,
+                                                               @AuthenticationPrincipal User admin) {
+        return deletionService.deleteInitialRegistration(id, admin);
     }
 }
