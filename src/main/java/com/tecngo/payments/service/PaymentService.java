@@ -131,6 +131,10 @@ public class PaymentService {
     }
 
     private void requireRole(User user, Role role) {
-        if (user.getRole() != role) throw new ForbiddenException("Role " + role + " is required");
+        boolean allowed = switch (role) {
+            case CLIENT, TECHNICIAN -> user.isActiveAs(role);
+            case ADMIN, VERIFIER -> user.hasRole(role);
+        };
+        if (!allowed) throw new ForbiddenException("Role " + role + " is required");
     }
 }
