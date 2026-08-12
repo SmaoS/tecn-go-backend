@@ -177,7 +177,7 @@ public class TechnicianProfileService {
                 || profile.getDescription() == null
                 || profile.getDescription().trim().length() < 30
                 || profile.getCategories() == null
-                || profile.getCategories().isEmpty();
+                || profile.getCategories().stream().noneMatch(ServiceCategory::isActive);
         if (incomplete) {
             throw new CodedForbiddenException("TECHNICIAN_PROFILE_INCOMPLETE",
                     "Completa tu perfil técnico para poder operar.");
@@ -188,6 +188,7 @@ public class TechnicianProfileService {
     public List<String> categoryNames(User user) {
         return profiles.findByUserId(user.getId())
                 .map(profile -> profile.getCategories().stream()
+                        .filter(ServiceCategory::isActive)
                         .map(ServiceCategory::getName)
                         .sorted()
                         .toList())
@@ -201,9 +202,12 @@ public class TechnicianProfileService {
 
     private TechnicianProfileResponse map(TechnicianProfile profile) {
         User user = profile.getUser();
+        List<ServiceCategory> activeCategories = profile.getCategories().stream()
+                .filter(ServiceCategory::isActive)
+                .toList();
         return new TechnicianProfileResponse(profile.getId(), user.getId(), user.getFullName(), user.getEmail(),
                 profile.getDocumentNumber(), profile.getPhone(),
-                profile.getCategories().stream().map(categoryService::map).toList(), profile.getDescription(),
+                activeCategories.stream().map(categoryService::map).toList(), profile.getDescription(),
                 profile.getLatitude(), profile.getLongitude(), profile.getStatus(), user.getProfilePhotoUrl(),
                 user.getDocumentPhotoUrl(), user.isProfilePhotoFaceValidated(),
                 user.getCertificatePhotoUrl(), user.getWorkExperienceDescription(),
@@ -221,7 +225,10 @@ public class TechnicianProfileService {
 
     private Set<ServiceCategory> categories(Set<UUID> ids) {
         Set<ServiceCategory> result = new HashSet<>();
-        ids.forEach(id -> result.add(categoryService.requireActive(id)));
+        ids.forEach(id -> categoryService.activeIfPresent(id).ifPresent(result::add));
+        if (result.isEmpty()) {
+            throw new ConflictException("At least one active service category is required");
+        }
         return result;
     }
 

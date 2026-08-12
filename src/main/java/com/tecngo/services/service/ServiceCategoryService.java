@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -67,6 +68,11 @@ public class ServiceCategoryService {
         ServiceCategory category = find(id);
         if (!category.isActive()) throw new ConflictException("Service category is inactive");
         return category;
+    }
+
+    public Optional<ServiceCategory> activeIfPresent(UUID id) {
+        ServiceCategory category = find(id);
+        return category.isActive() ? Optional.of(category) : Optional.empty();
     }
 
     private ServiceCategory find(UUID id) {

@@ -154,7 +154,10 @@ public class ServiceRequestQueryService {
         userAccess.requireActive(technician);
         emailVerification.requireVerified(technician);
         var profile = technicianProfiles.approvedProfile(technician);
-        List<UUID> categoryIds = profile.getCategories().stream().map(item -> item.getId()).toList();
+        List<UUID> categoryIds = profile.getCategories().stream()
+                .filter(item -> item.isActive())
+                .map(item -> item.getId())
+                .toList();
         if (categoryIds.isEmpty()) throw new ConflictException("Technician categories are required");
         if (requestedCategoryId != null && !categoryIds.contains(requestedCategoryId)) {
             throw new ForbiddenException("Technician does not support the selected category");
