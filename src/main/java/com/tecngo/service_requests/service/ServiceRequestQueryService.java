@@ -149,7 +149,8 @@ public class ServiceRequestQueryService {
     @Transactional(readOnly = true)
     public List<ServiceRequestResponse> available(User technician, UUID requestedCityId,
                                                   UUID requestedCategoryId, Boolean requestedUseRadius,
-                                                  Double requestedRadiusKm) {
+                                                  Double requestedRadiusKm,
+                                                  Double requestedLatitude, Double requestedLongitude) {
         access.requireRole(technician, Role.TECHNICIAN);
         userAccess.requireActive(technician);
         emailVerification.requireVerified(technician);
@@ -172,7 +173,10 @@ public class ServiceRequestQueryService {
         var liveLocation = technicianLocations.findByTechnicianId(technician.getId()).orElse(null);
         Double originLatitude;
         Double originLongitude;
-        if (liveLocation != null && liveLocation.isOnline()) {
+        if (validCoordinate(requestedLatitude, requestedLongitude)) {
+            originLatitude = requestedLatitude;
+            originLongitude = requestedLongitude;
+        } else if (liveLocation != null && liveLocation.isOnline()) {
             originLatitude = liveLocation.getLatitude();
             originLongitude = liveLocation.getLongitude();
         } else {
@@ -209,9 +213,11 @@ public class ServiceRequestQueryService {
     @Transactional(readOnly = true)
     public Page<ServiceRequestResponse> availablePage(
             User technician, UUID requestedCityId, UUID requestedCategoryId,
-            Boolean requestedUseRadius, Double requestedRadiusKm, int page, int size) {
+            Boolean requestedUseRadius, Double requestedRadiusKm,
+            Double requestedLatitude, Double requestedLongitude, int page, int size) {
         List<ServiceRequestResponse> items = available(technician, requestedCityId,
-                requestedCategoryId, requestedUseRadius, requestedRadiusKm);
+                requestedCategoryId, requestedUseRadius, requestedRadiusKm,
+                requestedLatitude, requestedLongitude);
         int boundedSize = Math.max(1, Math.min(size, 100));
         int boundedPage = Math.max(0, page);
         int from = Math.min(boundedPage * boundedSize, items.size());
@@ -250,6 +256,12 @@ public class ServiceRequestQueryService {
                 || destinationLatitude == null || destinationLongitude == null) return null;
         return distance.kilometers(originLatitude, originLongitude,
                 destinationLatitude, destinationLongitude);
+    }
+
+    private boolean validCoordinate(Double latitude, Double longitude) {
+        return latitude != null && longitude != null
+                && latitude >= -90 && latitude <= 90
+                && longitude >= -180 && longitude <= 180;
     }
 
     private PageRequest pageRequest(int page, int size) {

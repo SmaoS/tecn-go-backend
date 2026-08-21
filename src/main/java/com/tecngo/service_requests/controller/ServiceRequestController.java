@@ -115,8 +115,10 @@ public class ServiceRequestController {
             @RequestParam(required = false) java.util.UUID categoryId,
             @RequestParam(required = false) Boolean useRadius,
             @RequestParam(required = false) Double radiusKm,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude,
             @AuthenticationPrincipal User user) {
-        return service.available(user, cityId, categoryId, useRadius, radiusKm);
+        return service.available(user, cityId, categoryId, useRadius, radiusKm, latitude, longitude);
     }
 
     @GetMapping("/available/page")
@@ -126,11 +128,13 @@ public class ServiceRequestController {
             @RequestParam(required = false) java.util.UUID categoryId,
             @RequestParam(required = false) Boolean useRadius,
             @RequestParam(required = false) Double radiusKm,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @AuthenticationPrincipal User user) {
         return PageResponse.from(service.availablePage(
-                user, cityId, categoryId, useRadius, radiusKm, page, size));
+                user, cityId, categoryId, useRadius, radiusKm, latitude, longitude, page, size));
     }
 
     @PutMapping("/{id}/quote")

@@ -71,14 +71,17 @@ public class ServiceRequestService {
     }
 
     public List<ServiceRequestResponse> available(User technician, UUID cityId, UUID categoryId,
-                                                  Boolean useRadius, Double radiusKm) {
-        return queries.available(technician, cityId, categoryId, useRadius, radiusKm);
+                                                  Boolean useRadius, Double radiusKm,
+                                                  Double latitude, Double longitude) {
+        return queries.available(technician, cityId, categoryId, useRadius, radiusKm, latitude, longitude);
     }
 
     public Page<ServiceRequestResponse> availablePage(User technician, UUID cityId, UUID categoryId,
                                                       Boolean useRadius, Double radiusKm,
+                                                      Double latitude, Double longitude,
                                                       int page, int size) {
-        return queries.availablePage(technician, cityId, categoryId, useRadius, radiusKm, page, size);
+        return queries.availablePage(technician, cityId, categoryId, useRadius, radiusKm,
+                latitude, longitude, page, size);
     }
 
     public ServiceQuoteResponse quote(UUID id, BigDecimal price, String description, User technician) {

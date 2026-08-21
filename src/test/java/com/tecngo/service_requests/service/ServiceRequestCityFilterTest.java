@@ -81,7 +81,7 @@ class ServiceRequestCityFilterTest {
         when(images.findByServiceRequestIdInOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(List.of());
 
-        var result = service.available(technician, null, null, false, null);
+        var result = service.available(technician, null, null, false, null, null, null);
 
         assertThat(result).extracting("id").containsExactly(nearby.getId(), farther.getId());
         assertThat(result).extracting("cityName").containsOnly("Villavicencio");
@@ -122,7 +122,7 @@ class ServiceRequestCityFilterTest {
         when(images.findByServiceRequestIdInOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(List.of());
 
-        var result = service.available(technician, city.getId(), category.getId(), true, 10.0);
+        var result = service.available(technician, city.getId(), category.getId(), true, 10.0, null, null);
 
         assertThat(result).extracting("id").containsExactly(nearby.getId());
     }
@@ -149,7 +149,7 @@ class ServiceRequestCityFilterTest {
         when(images.findByServiceRequestIdInOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(List.of());
 
-        var result = service.available(technician, null, null, null, 10.0);
+        var result = service.available(technician, null, null, null, 10.0, null, null);
 
         assertThat(result).extracting("id").containsExactly(request.getId());
     }
@@ -175,7 +175,7 @@ class ServiceRequestCityFilterTest {
         when(images.findByServiceRequestIdInOrderByCreatedAtAsc(org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(List.of());
 
-        var result = service.availablePage(technician, null, null, false, null, 0, 10);
+        var result = service.availablePage(technician, null, null, false, null, null, null, 0, 10);
 
         assertThat(result.getContent()).extracting("id").containsExactly(request.getId());
         assertThat(result.getContent().getFirst().distanceKm()).isNull();
