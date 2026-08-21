@@ -25,6 +25,8 @@ import com.tecngo.service_requests.entity.ServiceRequestImage;
 import com.tecngo.service_requests.repository.ServiceQuoteRepository;
 import com.tecngo.service_requests.repository.ServiceRequestImageRepository;
 import com.tecngo.service_requests.repository.ServiceRequestRepository;
+import com.tecngo.service_security.service.ServiceSecurityCodeService;
+import com.tecngo.service_security.service.ServiceSecurityNotifier;
 import com.tecngo.services.entity.ServiceCategory;
 import com.tecngo.services.service.ServiceCategoryService;
 import com.tecngo.shared.exception.ConflictException;
@@ -83,6 +85,8 @@ class ServiceRequestServiceCharacterizationTest {
     @Mock ReferralService referrals;
     @Mock UserReportRepository reports;
     @Mock TechnicianWalletService wallets;
+    @Mock ServiceSecurityCodeService securityCodes;
+    @Mock ServiceSecurityNotifier securityNotifier;
     ServiceRequestService service;
 
     private ServiceCategory category;
@@ -103,11 +107,11 @@ class ServiceRequestServiceCharacterizationTest {
                 userAccess, geographicCatalogs, access, assembler);
         ServiceQuoteService quoteService = new ServiceQuoteService(
                 requests, quotes, technicianProfiles, emailVerification, parameters, wallets,
-                access, assembler, notifier);
+                access, assembler, notifier, securityCodes);
         ServiceLifecycleService lifecycle = new ServiceLifecycleService(
                 requests, payments, feeCalculator, referrals, reports, wallets, parameters,
-                access, assembler, notifier);
-        service = new ServiceRequestService(commands, queries, quoteService, lifecycle);
+                access, assembler, notifier, securityCodes, securityNotifier);
+        service = new ServiceRequestService(commands, queries, quoteService, lifecycle, securityCodes);
 
         category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").active(true).build();
         city = City.builder().id(UUID.randomUUID()).name("Villavicencio").build();
