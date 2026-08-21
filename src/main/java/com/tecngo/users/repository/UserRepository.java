@@ -14,14 +14,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.Set;
+import java.time.Instant;
 
 public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificationExecutor<User> {
     Optional<User> findByEmailIgnoreCase(String email);
     Optional<User> findByPhoneNormalized(String phoneNormalized);
     boolean existsByPhoneNormalized(String phoneNormalized);
     @Modifying
-    @Query("update User u set u.fcmToken = null, u.fcmTokenUpdatedAt = CURRENT_TIMESTAMP where u.fcmToken = :token and u.id <> :userId")
-    int clearFcmTokenFromOtherUsers(@Param("token") String token, @Param("userId") UUID userId);
+    @Query("update User u set u.fcmToken = null, u.fcmTokenUpdatedAt = :updatedAt where u.fcmToken = :token and u.id <> :userId")
+    int clearFcmTokenFromOtherUsers(@Param("token") String token, @Param("userId") UUID userId,
+                                    @Param("updatedAt") Instant updatedAt);
     @Query("""
             select u from User u
             left join fetch u.country

@@ -20,12 +20,16 @@ public class ServiceSecurityAudit {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_request_id")
     private ServiceRequest serviceRequest;
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "technician_id")
     private User technician;
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_id")
     private User client;
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "actor_user_id")
     private User actor;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

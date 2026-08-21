@@ -20,10 +20,13 @@ public class ServiceSecurityCode {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_request_id")
     private ServiceRequest serviceRequest;
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "technician_id")
     private User technician;
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_id")
     private User client;
     @Column(nullable = false, length = 10)
     private String codePlain;

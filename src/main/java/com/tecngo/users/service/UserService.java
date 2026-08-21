@@ -44,7 +44,7 @@ public class UserService {
     @Transactional
     public void updateFcmToken(User user, String token) {
         String cleanToken = token.trim();
-        users.clearFcmTokenFromOtherUsers(cleanToken, user.getId());
+        users.clearFcmTokenFromOtherUsers(cleanToken, user.getId(), Instant.now());
         user.setFcmToken(cleanToken);
         user.setFcmTokenUpdatedAt(Instant.now());
         users.save(user);
