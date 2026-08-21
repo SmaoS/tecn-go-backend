@@ -46,6 +46,11 @@ public class SystemParameterService {
     public static final String SERVICE_SEARCH_USE_RADIUS = "SERVICE_SEARCH_USE_RADIUS";
     public static final String SERVICE_SEARCH_DEFAULT_RADIUS_KM = "SERVICE_SEARCH_DEFAULT_RADIUS_KM";
     public static final String SERVICE_SEARCH_MAX_RADIUS_KM = "SERVICE_SEARCH_MAX_RADIUS_KM";
+    public static final String SERVICE_SECURITY_CODE_ENABLED = "SERVICE_SECURITY_CODE_ENABLED";
+    public static final String SERVICE_SECURITY_CODE_LENGTH = "SERVICE_SECURITY_CODE_LENGTH";
+    public static final String SERVICE_SECURITY_CODE_EXPIRATION_MINUTES = "SERVICE_SECURITY_CODE_EXPIRATION_MINUTES";
+    public static final String SERVICE_SECURITY_MAX_ATTEMPTS = "SERVICE_SECURITY_MAX_ATTEMPTS";
+    public static final String SERVICE_SECURITY_MAX_REGENERATIONS = "SERVICE_SECURITY_MAX_REGENERATIONS";
 
     private final SystemParameterRepository repository;
 
@@ -146,6 +151,11 @@ public class SystemParameterService {
     public BigDecimal serviceSearchMaxRadiusKm() {
         return decimal(SERVICE_SEARCH_MAX_RADIUS_KM, serviceSearchMaxRadiusFallback);
     }
+    public boolean serviceSecurityCodeEnabled() { return bool(SERVICE_SECURITY_CODE_ENABLED, true); }
+    public int serviceSecurityCodeLength() { return integer(SERVICE_SECURITY_CODE_LENGTH, 6); }
+    public int serviceSecurityCodeExpirationMinutes() { return integer(SERVICE_SECURITY_CODE_EXPIRATION_MINUTES, 60); }
+    public int serviceSecurityMaxAttempts() { return integer(SERVICE_SECURITY_MAX_ATTEMPTS, 5); }
+    public int serviceSecurityMaxRegenerations() { return integer(SERVICE_SECURITY_MAX_REGENERATIONS, 3); }
 
     private boolean bool(String key, boolean fallback) {
         return repository.findByKeyAndActiveTrue(key)
@@ -222,6 +232,16 @@ public class SystemParameterService {
         if ((parameter.getKey().equals(SERVICE_SEARCH_DEFAULT_RADIUS_KM)
                 || parameter.getKey().equals(SERVICE_SEARCH_MAX_RADIUS_KM))
                 && number.signum() <= 0) {
+            throw new IllegalArgumentException(parameter.getKey() + " must be greater than zero");
+        }
+        if (parameter.getKey().equals(SERVICE_SECURITY_CODE_LENGTH)
+                && (number.intValue() < 5 || number.intValue() > 6)) {
+            throw new IllegalArgumentException("SERVICE_SECURITY_CODE_LENGTH must be 5 or 6");
+        }
+        if ((parameter.getKey().equals(SERVICE_SECURITY_CODE_EXPIRATION_MINUTES)
+                || parameter.getKey().equals(SERVICE_SECURITY_MAX_ATTEMPTS)
+                || parameter.getKey().equals(SERVICE_SECURITY_MAX_REGENERATIONS))
+                && number.intValue() < 1) {
             throw new IllegalArgumentException(parameter.getKey() + " must be greater than zero");
         }
         if (parameter.getKey().equals(SERVICE_SEARCH_DEFAULT_RADIUS_KM)

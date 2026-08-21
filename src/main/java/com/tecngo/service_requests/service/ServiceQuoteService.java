@@ -11,6 +11,7 @@ import com.tecngo.service_requests.repository.ServiceRequestRepository;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.shared.exception.ForbiddenException;
 import com.tecngo.shared.exception.NotFoundException;
+import com.tecngo.service_security.service.ServiceSecurityCodeService;
 import com.tecngo.system_parameters.service.SystemParameterService;
 import com.tecngo.technician_wallet.service.TechnicianWalletService;
 import com.tecngo.technicians.service.TechnicianProfileService;
@@ -39,6 +40,7 @@ public class ServiceQuoteService {
     private final ServiceRequestAccessPolicy access;
     private final ServiceRequestAssembler assembler;
     private final ServiceRequestNotifier notifier;
+    private final ServiceSecurityCodeService securityCodes;
 
     @Transactional
     public ServiceQuoteResponse quote(UUID id, BigDecimal technicianPrice,
@@ -103,6 +105,7 @@ public class ServiceQuoteService {
         request.setTechnicianPrice(selected.getPrice());
         request.setFinalPrice(selected.getPrice());
         request.setStatus(RequestStatus.QUOTE_ACCEPTED);
+        securityCodes.generateForAssignedRequest(request);
         notifier.quoteAccepted(request, selected.getTechnician());
         return assembler.response(request);
     }

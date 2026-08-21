@@ -37,11 +37,11 @@ import java.util.UUID;
 public class ServiceRequestQueryService {
     private static final Set<RequestStatus> CLIENT_ACTIVE_STATUSES = Set.of(
             RequestStatus.QUOTE_PENDING, RequestStatus.QUOTED, RequestStatus.QUOTE_ACCEPTED,
-            RequestStatus.ON_THE_WAY, RequestStatus.ARRIVED, RequestStatus.IN_PROGRESS,
-            RequestStatus.COMPLETED);
+            RequestStatus.ON_THE_WAY, RequestStatus.ARRIVED, RequestStatus.SECURITY_VERIFIED,
+            RequestStatus.IN_PROGRESS, RequestStatus.COMPLETED);
     private static final Set<RequestStatus> TECHNICIAN_ACTIVE_STATUSES = Set.of(
             RequestStatus.QUOTE_ACCEPTED, RequestStatus.ON_THE_WAY, RequestStatus.ARRIVED,
-            RequestStatus.IN_PROGRESS, RequestStatus.COMPLETED);
+            RequestStatus.SECURITY_VERIFIED, RequestStatus.IN_PROGRESS, RequestStatus.COMPLETED);
     private static final Set<RequestStatus> HISTORY_STATUSES = Set.of(
             RequestStatus.PAID, RequestStatus.CANCELLED, RequestStatus.PAYMENT_DISPUTE);
 
@@ -203,7 +203,7 @@ public class ServiceRequestQueryService {
                                 Comparator.nullsLast(Double::compareTo))
                         .thenComparing(ServiceRequest::getCreatedAt, Comparator.reverseOrder()))
                 .toList();
-        return assembler.responses(sorted, distances, true, technician);
+        return assembler.responses(sorted, distances, false, technician);
     }
 
     @Transactional(readOnly = true)

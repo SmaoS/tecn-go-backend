@@ -6,6 +6,7 @@ public enum RequestStatus {
     QUOTE_ACCEPTED,
     ON_THE_WAY,
     ARRIVED,
+    SECURITY_VERIFIED,
     IN_PROGRESS,
     COMPLETED,
     PAID,

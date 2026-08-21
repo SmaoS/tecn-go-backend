@@ -15,6 +15,8 @@ import com.tecngo.service_requests.dto.ServiceRequestResponse;
 import com.tecngo.service_requests.entity.RequestStatus;
 import com.tecngo.service_requests.entity.ServiceRequest;
 import com.tecngo.service_requests.repository.ServiceRequestRepository;
+import com.tecngo.service_security.service.ServiceSecurityCodeService;
+import com.tecngo.service_security.service.ServiceSecurityNotifier;
 import com.tecngo.shared.exception.ConflictException;
 import com.tecngo.shared.exception.NotFoundException;
 import com.tecngo.system_parameters.service.SystemParameterService;
@@ -42,6 +44,8 @@ public class ServiceLifecycleService {
     private final ServiceRequestAccessPolicy access;
     private final ServiceRequestAssembler assembler;
     private final ServiceRequestNotifier notifier;
+    private final ServiceSecurityCodeService securityCodes;
+    private final ServiceSecurityNotifier securityNotifier;
 
     @Transactional
     public ServiceRequestResponse updateStatus(UUID id, RequestStatus nextStatus, User user) {
@@ -54,6 +58,7 @@ public class ServiceLifecycleService {
                 throw new ConflictException("Completed, paid or cancelled requests cannot be cancelled");
             }
             request.setStatus(RequestStatus.CANCELLED);
+            securityCodes.cancelActive(request, user);
             notifier.cancelled(request, user);
             return assembler.response(request);
         }
@@ -65,6 +70,9 @@ public class ServiceLifecycleService {
         request.setStatus(nextStatus);
         if (nextStatus == RequestStatus.COMPLETED) incrementCompleted(request);
         notifier.statusChanged(request, nextStatus);
+        if (nextStatus == RequestStatus.ARRIVED && parameters.serviceSecurityCodeEnabled()) {
+            securityNotifier.technicianArrived(request);
+        }
         return assembler.response(request);
     }
 
@@ -78,6 +86,10 @@ public class ServiceLifecycleService {
                 .orElseThrow(() -> new NotFoundException("Service request not found"));
         access.requireAssignedTechnician(request, technician);
         validateClosable(request);
+        if (parameters.serviceSecurityCodeEnabled() && !securityCodes.verified(request)) {
+            throw new ConflictException("TECHNICIAN_SECURITY_VERIFICATION_REQUIRED",
+                    "El cliente debe verificar tu código de seguridad antes de iniciar el servicio.");
+        }
         boolean alreadyCompleted = request.getStatus() == RequestStatus.COMPLETED;
         if (paymentReceived) {
             createPaidPayment(request,
@@ -139,7 +151,8 @@ public class ServiceLifecycleService {
             throw new ConflictException("Service request is already closed");
         }
         if (!Set.of(RequestStatus.QUOTE_ACCEPTED, RequestStatus.ON_THE_WAY, RequestStatus.ARRIVED,
-                RequestStatus.IN_PROGRESS, RequestStatus.COMPLETED).contains(request.getStatus())) {
+                RequestStatus.SECURITY_VERIFIED, RequestStatus.IN_PROGRESS,
+                RequestStatus.COMPLETED).contains(request.getStatus())) {
             throw new ConflictException("Service request cannot be completed from current status");
         }
         if (request.getFinalPrice() == null || request.getFinalPrice().signum() <= 0) {
@@ -151,7 +164,8 @@ public class ServiceLifecycleService {
         return switch (current) {
             case QUOTE_ACCEPTED -> next == RequestStatus.ON_THE_WAY;
             case ON_THE_WAY -> next == RequestStatus.ARRIVED;
-            case ARRIVED -> next == RequestStatus.IN_PROGRESS;
+            case ARRIVED -> !parameters.serviceSecurityCodeEnabled() && next == RequestStatus.IN_PROGRESS;
+            case SECURITY_VERIFIED -> next == RequestStatus.IN_PROGRESS;
             case IN_PROGRESS -> next == RequestStatus.COMPLETED;
             default -> false;
         };

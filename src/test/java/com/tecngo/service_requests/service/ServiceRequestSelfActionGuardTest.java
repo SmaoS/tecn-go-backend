@@ -55,6 +55,8 @@ class ServiceRequestSelfActionGuardTest {
     private org.springframework.context.ApplicationEventPublisher events;
     @Mock
     private com.tecngo.geolocation.HaversineDistance distance;
+    @Mock
+    private com.tecngo.service_security.service.ServiceSecurityCodeService securityCodes;
     private ServiceQuoteService service;
 
     @BeforeEach
@@ -64,7 +66,7 @@ class ServiceRequestSelfActionGuardTest {
         ServiceRequestNotifier notifier = new ServiceRequestNotifier(events, technicianProfileRepository, distance);
         service = new ServiceQuoteService(
                 requests, quotes, technicianProfiles, emailVerification, parameters, wallets,
-                access, assembler, notifier);
+                access, assembler, notifier, securityCodes);
     }
 
     @Test

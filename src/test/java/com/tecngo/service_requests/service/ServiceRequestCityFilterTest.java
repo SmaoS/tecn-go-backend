@@ -58,9 +58,9 @@ class ServiceRequestCityFilterTest {
     }
 
     @Test
-    void availableRequestsUseTechnicianCityAndExposeOnlyApproximateLocation() {
+    void availableRequestsUseTechnicianCityAndExposeExactLocationForQuoting() {
         City city = City.builder().id(UUID.randomUUID()).name("Villavicencio").build();
-        ServiceCategory category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").build();
+        ServiceCategory category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").active(true).build();
         User technician = User.builder().id(UUID.randomUUID()).role(Role.TECHNICIAN).city(city).build();
         TechnicianProfile profile = TechnicianProfile.builder().user(technician).latitude(4.1).longitude(-73.6)
                 .categories(Set.of(category)).available(false).build();
@@ -85,13 +85,13 @@ class ServiceRequestCityFilterTest {
 
         assertThat(result).extracting("id").containsExactly(nearby.getId(), farther.getId());
         assertThat(result).extracting("cityName").containsOnly("Villavicencio");
-        assertThat(result).extracting("address").containsOnly("ciudad");
+        assertThat(result).extracting("address").containsOnly("Zona, ciudad");
         assertThat(result).extracting("locationPrecision")
-                .containsOnly(LocationPrecision.APPROXIMATE);
-        assertThat(result.getFirst().latitude()).isEqualTo(4.11);
-        assertThat(result.getFirst().longitude()).isEqualTo(-73.61);
-        assertThat(result.getLast().latitude()).isEqualTo(4.12);
-        assertThat(result.getLast().longitude()).isEqualTo(-73.62);
+                .containsOnly(LocationPrecision.EXACT);
+        assertThat(result.getFirst().latitude()).isEqualTo(4.1137);
+        assertThat(result.getFirst().longitude()).isEqualTo(-73.6138);
+        assertThat(result.getLast().latitude()).isEqualTo(4.1247);
+        assertThat(result.getLast().longitude()).isEqualTo(-73.6249);
         verify(images, times(1)).findByServiceRequestIdInOrderByCreatedAtAsc(
                 org.mockito.ArgumentMatchers.anyList());
     }
@@ -99,7 +99,7 @@ class ServiceRequestCityFilterTest {
     @Test
     void optionalRadiusFiltersRequestsWhenExplicitlyEnabled() {
         City city = City.builder().id(UUID.randomUUID()).name("Villavicencio").build();
-        ServiceCategory category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").build();
+        ServiceCategory category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").active(true).build();
         User technician = User.builder().id(UUID.randomUUID()).role(Role.TECHNICIAN).city(city).build();
         TechnicianProfile profile = TechnicianProfile.builder().user(technician).latitude(4.1).longitude(-73.6)
                 .categories(Set.of(category)).build();
@@ -129,7 +129,7 @@ class ServiceRequestCityFilterTest {
 
     @Test
     void legacyTechnicianWithoutCityCanStillSearchByCategoryAndRadius() {
-        ServiceCategory category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").build();
+        ServiceCategory category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").active(true).build();
         User technician = User.builder().id(UUID.randomUUID()).role(Role.TECHNICIAN).build();
         TechnicianProfile profile = TechnicianProfile.builder().user(technician).latitude(4.1).longitude(-73.6)
                 .categories(Set.of(category)).build();
@@ -157,7 +157,7 @@ class ServiceRequestCityFilterTest {
     @Test
     void availablePageDoesNotCalculateDistanceWhenTechnicianLocationIsMissingAndRadiusIsDisabled() {
         City city = City.builder().id(UUID.randomUUID()).name("Villavicencio").build();
-        ServiceCategory category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").build();
+        ServiceCategory category = ServiceCategory.builder().id(UUID.randomUUID()).name("Electricista").active(true).build();
         User technician = User.builder().id(UUID.randomUUID()).role(Role.TECHNICIAN).city(city).build();
         TechnicianProfile profile = TechnicianProfile.builder().user(technician)
                 .categories(Set.of(category)).build();

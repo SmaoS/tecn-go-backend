@@ -1,6 +1,9 @@
 package com.tecngo.service_requests.controller;
 
 import com.tecngo.service_requests.dto.*;
+import com.tecngo.service_security.dto.SecurityCodeResponse;
+import com.tecngo.service_security.dto.VerifyTechnicianRequest;
+import com.tecngo.service_security.dto.VerifyTechnicianResponse;
 import com.tecngo.service_requests.service.ServiceRequestService;
 import com.tecngo.users.entity.User;
 import com.tecngo.shared.dto.PageResponse;
@@ -176,5 +179,27 @@ public class ServiceRequestController {
                                                      @AuthenticationPrincipal User user) {
         return service.technicianComplete(id, request.paymentReceived(), request.paymentMethod(),
                 request.comment(), user);
+    }
+
+    @GetMapping("/{id}/security-code")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    public SecurityCodeResponse securityCode(@PathVariable java.util.UUID id,
+                                             @AuthenticationPrincipal User user) {
+        return service.securityCode(id, user);
+    }
+
+    @PostMapping("/{id}/security-code/regenerate")
+    @PreAuthorize("hasRole('TECHNICIAN')")
+    public SecurityCodeResponse regenerateSecurityCode(@PathVariable java.util.UUID id,
+                                                       @AuthenticationPrincipal User user) {
+        return service.regenerateSecurityCode(id, user);
+    }
+
+    @PostMapping("/{id}/verify-technician")
+    @PreAuthorize("hasRole('CLIENT')")
+    public VerifyTechnicianResponse verifyTechnician(@PathVariable java.util.UUID id,
+                                                     @Valid @RequestBody VerifyTechnicianRequest request,
+                                                     @AuthenticationPrincipal User user) {
+        return service.verifyTechnician(id, request.code(), user);
     }
 }

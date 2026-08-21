@@ -5,6 +5,9 @@ import com.tecngo.service_requests.dto.CreateServiceRequest;
 import com.tecngo.service_requests.dto.ServiceQuoteResponse;
 import com.tecngo.service_requests.dto.ServiceRequestResponse;
 import com.tecngo.service_requests.entity.RequestStatus;
+import com.tecngo.service_security.dto.SecurityCodeResponse;
+import com.tecngo.service_security.dto.VerifyTechnicianResponse;
+import com.tecngo.service_security.service.ServiceSecurityCodeService;
 import com.tecngo.users.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +24,7 @@ public class ServiceRequestService {
     private final ServiceRequestQueryService queries;
     private final ServiceQuoteService quoteService;
     private final ServiceLifecycleService lifecycle;
+    private final ServiceSecurityCodeService securityCodes;
 
     public ServiceRequestResponse create(CreateServiceRequest request, User client) {
         return commands.create(request, client);
@@ -101,5 +105,17 @@ public class ServiceRequestService {
                                                      PaymentMethod paymentMethod, String comment,
                                                      User technician) {
         return lifecycle.technicianComplete(id, paymentReceived, paymentMethod, comment, technician);
+    }
+
+    public SecurityCodeResponse securityCode(UUID id, User technician) {
+        return securityCodes.currentCode(id, technician);
+    }
+
+    public SecurityCodeResponse regenerateSecurityCode(UUID id, User technician) {
+        return securityCodes.regenerate(id, technician);
+    }
+
+    public VerifyTechnicianResponse verifyTechnician(UUID id, String code, User client) {
+        return securityCodes.verify(id, code, client);
     }
 }

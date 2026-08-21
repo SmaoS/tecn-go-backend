@@ -31,7 +31,7 @@ import com.tecngo.technicians.entity.TechnicianStatus;
 public class TechnicianLocationService {
     private static final Set<RequestStatus> TRACKABLE = Set.of(
             RequestStatus.QUOTE_ACCEPTED, RequestStatus.ON_THE_WAY, RequestStatus.ARRIVED,
-            RequestStatus.IN_PROGRESS);
+            RequestStatus.SECURITY_VERIFIED, RequestStatus.IN_PROGRESS);
 
     private final TechnicianLocationRepository locations;
     private final TechnicianProfileService profiles;
